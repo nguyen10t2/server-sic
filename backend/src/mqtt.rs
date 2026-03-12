@@ -6,7 +6,7 @@ use crate::state::Payload;
 use crate::state::AppState;
 
 /**
- * Hàm chạy MQTT client, lắng nghe topic "test/tokio" và cập nhật state khi có dữ liệu mới
+ * Hàm chạy MQTT client, lắng nghe topic "fire/#" và cập nhật state khi có dữ liệu mới
  */
 pub async fn run_mqtt_client(state: Arc<AppState>, mqtt_broker: &str, mqtt_port: u16) {
     let mut mqttoptions = MqttOptions::new("rust-backend", mqtt_broker, mqtt_port);
