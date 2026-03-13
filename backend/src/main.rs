@@ -1,5 +1,5 @@
 use actix_web::middleware::Logger;
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpResponse, HttpServer, get, web};
 use log::info;
 use std::sync::Arc;
 
@@ -7,6 +7,13 @@ use esp32::configs::env::ENV;
 use esp32::database::pg::PayloadRepository;
 use esp32::database::pool::DB;
 use esp32::state::app_state::AppState;
+
+#[get("/")]
+async fn index() -> HttpResponse {
+    HttpResponse::Found()
+        .insert_header(("Location", "/api/status"))
+        .finish()
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -79,6 +86,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(app_data.clone())
+            .service(index)
             .service(esp32::controllers::api::ws_index)
             .service(esp32::controllers::api::get_status)
             .service(esp32::controllers::api::get_fire_status)
