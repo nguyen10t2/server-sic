@@ -1,31 +1,38 @@
-mod state;
+mod configs;
+mod controllers;
+mod database;
 mod mqtt;
-mod handlers;
-mod helper;
+mod state;
+mod common;
+mod constants;
 
-use actix_web::{web, App, HttpServer};
-use std::{collections::HashMap, sync::{Arc, Mutex}};
-use crate::{helper::get_env, state::AppState};
+use actix_web::{App, HttpServer, web};
+use std::sync::Arc;
+
+use crate::configs::env::ENV;
+use crate::database::pg::PayloadRepository;
+use crate::database::pool::DB;
+use crate::state::app_state::AppState;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok(); // Load .env file
 
-    let ip = get_env("ip", Some("localhost")).unwrap();
-    let port = get_env("port", Some("8080")).unwrap().parse::<u16>().unwrap();
+    let ip = ENV.ip.clone();
+    let port = ENV.port;
 
-    let mqtt_broker = get_env("mqtt_broker", Some("localhost")).unwrap();
-    let mqtt_port = get_env("mqtt_port", Some("1883")).unwrap().parse::<u16>().unwrap();
+    let mqtt_broker = ENV.mqtt_broker.clone();
+    let mqtt_port = ENV.mqtt_port;
+
+    let payload_repo = Arc::new(PayloadRepository::new(DB.clone()));
 
     // Khởi tạo state chung
-    let shared_state = Arc::new(AppState {
-        latest_data: Mutex::new(HashMap::new()),
-    });
+    let shared_state = Arc::new(AppState::new());
 
     // Chạy MQTT ở background
     let mqtt_state = shared_state.clone();
     tokio::spawn(async move {
-        mqtt::run_mqtt_client(mqtt_state, &mqtt_broker, mqtt_port).await;
+        mqtt::run_mqtt_client(mqtt_state, payload_repo, &mqtt_broker, mqtt_port).await;
     });
 
     // Chạy Web Server
@@ -36,7 +43,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(app_data.clone())
-            .service(handlers::get_status)
+            .service(controllers::api::get_status)
+            .service(controllers::api::get_fire_status)
+            .service(controllers::api::get_evacuation_path)
+            .service(controllers::api::get_all_evacuation_paths)
+            .service(controllers::api::get_building_graph)
     })
     .bind((ip, port))?
     .run()
