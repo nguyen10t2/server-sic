@@ -1,17 +1,17 @@
-use std::collections::VecDeque;
 use dashmap::DashMap;
+use std::collections::VecDeque;
 
-use crate::database::schema::Payload;
-use crate::constants::fire_detection::*;
 use crate::constants::defaults;
+use crate::constants::fire_detection::*;
 use crate::constants::weight::*;
+use crate::database::schema::Payload;
 
 /// Fire detection result
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct FireDetectionResult {
     pub node_id: u16,
-    pub fire_probability: f32,  // 0.0 - 1.0
-    pub is_fire: bool,          // True nếu fire_probability > threshold
+    pub fire_probability: f32, // 0.0 - 1.0
+    pub is_fire: bool,         // True nếu fire_probability > threshold
     pub risk_level: RiskLevel,
     pub details: FireDetails,
 }
@@ -45,11 +45,7 @@ pub struct NodeHistory {
 
 impl NodeHistory {
     pub fn new(node_id: u16) -> Self {
-        Self {
-            node_id,
-            readings: VecDeque::new(),
-            max_size: MAX_HISTORY_SIZE,
-        }
+        Self { node_id, readings: VecDeque::new(), max_size: MAX_HISTORY_SIZE }
     }
 
     pub fn add(&mut self, payload: Payload) {
@@ -117,7 +113,7 @@ impl NodeHistory {
 }
 
 /// Fire Detection Model
-/// 
+///
 /// Sử dụng kết hợp:
 /// 1. Rule-based detection (thresholds)
 /// 2. Anomaly detection (so với historical baseline)
@@ -151,17 +147,18 @@ impl FireDetectionModel {
 
     /// Thêm reading vào history
     pub fn add_reading(&self, payload: &Payload) {
-        let mut history = self.history
+        let mut history = self
+            .history
             .entry(payload.node_id)
             .or_insert_with(|| NodeHistory::new(payload.node_id));
-        
+
         history.add(payload.clone());
     }
 
     /// Detect fire cho một node
     pub fn detect(&self, node_id: u16) -> FireDetectionResult {
         let history = self.history.get(&node_id);
-        
+
         // Nếu không có history, return Safe
         if history.is_none() || history.as_ref().map(|h| h.is_empty()).unwrap_or(true) {
             return FireDetectionResult {
@@ -184,11 +181,11 @@ impl FireDetectionModel {
         let latest = history.latest().unwrap();
 
         // 1. Rule-based scores
-        let (temperature_score, smoke_score, humidity_score, flame_factor) = 
+        let (temperature_score, smoke_score, humidity_score, flame_factor) =
             self.calculate_sensor_scores(latest);
 
         // 2. Anomaly detection (so với baseline)
-        let (anomaly_score, _temp_anomaly, _smoke_anomaly) = 
+        let (anomaly_score, _temp_anomaly, _smoke_anomaly) =
             self.calculate_anomaly(&history, latest);
 
         // 3. Trend analysis
@@ -327,12 +324,11 @@ impl FireDetectionModel {
         let weight_anomaly = WEIGHT_ANOMALY;
         let weight_humidity = WEIGHT_HUMIDITY;
 
-        let probability = 
-            smoke_score * weight_smoke +
-            temperature_score * weight_temp +
-            trend_factor * weight_trend +
-            anomaly_score * weight_anomaly +
-            humidity_score * weight_humidity;
+        let probability = smoke_score * weight_smoke
+            + temperature_score * weight_temp
+            + trend_factor * weight_trend
+            + anomaly_score * weight_anomaly
+            + humidity_score * weight_humidity;
 
         probability.min(1.0).max(0.0)
     }
@@ -340,30 +336,31 @@ impl FireDetectionModel {
     /// Kiểm tra confirmation để tránh false positive
     fn check_confirmation(&self, node_id: u16, probability: f32) -> bool {
         if probability >= self.fire_threshold {
-            let mut count = self.consecutive_alerts
-                .entry(node_id)
-                .or_insert(0);
-            
+            let mut count = self.consecutive_alerts.entry(node_id).or_insert(0);
+
             *count += 1;
-            
+
             // Reset nếu probability thấp
             if probability < self.fire_threshold * 0.5 {
                 *count = 0;
             }
-            
+
             *count >= self.confirmation_count
         } else {
             // Reset counter nếu probability thấp
-            let mut count = self.consecutive_alerts
-                .entry(node_id)
-                .or_insert(0);
+            let mut count = self.consecutive_alerts.entry(node_id).or_insert(0);
             *count = 0;
             false
         }
     }
 
     /// Xác định risk level
-    fn determine_risk_level(&self, probability: f32, flame_factor: f32, trend_factor: f32) -> RiskLevel {
+    fn determine_risk_level(
+        &self,
+        probability: f32,
+        flame_factor: f32,
+        trend_factor: f32,
+    ) -> RiskLevel {
         // Flame = immediate critical
         if flame_factor > 0.5 {
             return RiskLevel::Critical;
@@ -386,20 +383,13 @@ impl FireDetectionModel {
     /// Detect fire cho tất cả nodes
     pub fn detect_all(&self) -> Vec<FireDetectionResult> {
         let node_ids: Vec<u16> = self.history.iter().map(|r| r.node_id).collect();
-        
-        node_ids
-            .into_iter()
-            .map(|id| self.detect(id))
-            .collect()
+
+        node_ids.into_iter().map(|id| self.detect(id)).collect()
     }
 
     /// Lấy danh sách nodes có cháy
     pub fn get_fire_nodes(&self) -> Vec<u16> {
-        self.detect_all()
-            .into_iter()
-            .filter(|r| r.is_fire)
-            .map(|r| r.node_id)
-            .collect()
+        self.detect_all().into_iter().filter(|r| r.is_fire).map(|r| r.node_id).collect()
     }
 
     /// Reset history cho một node
@@ -430,7 +420,7 @@ mod tests {
     #[test]
     fn test_fire_detection_no_fire() {
         let model = FireDetectionModel::new();
-        
+
         let payload = Payload {
             timestamp: 0,
             temperature: 25.0,
@@ -452,7 +442,7 @@ mod tests {
     #[test]
     fn test_fire_detection_with_flame() {
         let model = FireDetectionModel::new();
-        
+
         // First reading - should not be fire yet (needs confirmation)
         let payload = Payload {
             timestamp: 0,
@@ -467,7 +457,7 @@ mod tests {
 
         model.add_reading(&payload);
         let result = model.detect(1);
-        
+
         // Flame = true should immediately trigger fire regardless of confirmation
         assert!(result.is_fire || result.fire_probability > 0.9);
         assert_eq!(result.risk_level, RiskLevel::Critical);
@@ -476,7 +466,7 @@ mod tests {
     #[test]
     fn test_fire_detection_temperature_rise() {
         let model = FireDetectionModel::new();
-        
+
         // Baseline
         model.add_reading(&Payload {
             timestamp: 0,

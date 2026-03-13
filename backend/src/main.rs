@@ -1,10 +1,10 @@
+mod common;
 mod configs;
+mod constants;
 mod controllers;
 mod database;
 mod mqtt;
 mod state;
-mod common;
-mod constants;
 
 use actix_web::{App, HttpServer, web};
 use std::sync::Arc;
@@ -45,8 +45,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(app_data.clone())
             .service(controllers::api::get_status)
             .service(controllers::api::get_fire_status)
-            .service(controllers::api::get_evacuation_path)
             .service(controllers::api::get_all_evacuation_paths)
+            .service(controllers::api::get_evacuation_path)
             .service(controllers::api::get_building_graph)
     })
     .bind((ip, port))?

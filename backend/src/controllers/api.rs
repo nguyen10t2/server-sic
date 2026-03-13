@@ -1,5 +1,5 @@
-use crate::state::app_state::AppState;
 use crate::common::fire_detection::FireDetectionResult;
+use crate::state::app_state::AppState;
 use actix_web::{HttpResponse, Responder, get, web};
 
 /// Lấy tất cả dữ liệu sensor mới nhất
@@ -23,10 +23,7 @@ pub async fn get_fire_status(data: web::Data<AppState>) -> impl Responder {
         fire_nodes: Vec<FireDetectionResult>,
     }
 
-    HttpResponse::Ok().json(FireStatusResponse {
-        has_fire,
-        fire_nodes: fire_status,
-    })
+    HttpResponse::Ok().json(FireStatusResponse { has_fire, fire_nodes: fire_status })
 }
 
 /// Lấy evacuation path cho một node cụ thể
@@ -36,7 +33,7 @@ pub async fn get_evacuation_path(
     node_id: web::Path<u16>,
 ) -> impl Responder {
     let node = *node_id;
-    
+
     if let Some(path) = data.get_evacuation_path(node) {
         #[derive(serde::Serialize)]
         struct EvacuationResponse {
@@ -66,13 +63,15 @@ pub async fn get_evacuation_path(
 #[get("/api/evacuate/all")]
 pub async fn get_all_evacuation_paths(data: web::Data<AppState>) -> impl Responder {
     let has_fire = data.has_fire();
-    
+
     // Get all cached paths
-    let paths: Vec<_> = data.cached_path.iter()
+    let paths: Vec<_> = data
+        .cached_path
+        .iter()
         .map(|entry| {
             let node_id = entry.key();
             let path = entry.value();
-            
+
             serde_json::json!({
                 "node_id": *node_id,
                 "path": path.path.clone(),
@@ -85,14 +84,10 @@ pub async fn get_all_evacuation_paths(data: web::Data<AppState>) -> impl Respond
     #[derive(serde::Serialize)]
     struct EvacuationAllResponse {
         has_fire: bool,
-        #[serde(flatten)]
         paths: Vec<serde_json::Value>,
     }
 
-    HttpResponse::Ok().json(EvacuationAllResponse {
-        has_fire,
-        paths,
-    })
+    HttpResponse::Ok().json(EvacuationAllResponse { has_fire, paths })
 }
 
 /// Lấy thông tin building graph
@@ -105,9 +100,7 @@ pub async fn get_building_graph(data: web::Data<AppState>) -> impl Responder {
         exits: Vec<u8>,
     }
 
-    let edges: Vec<_> = data.graph.edges.iter()
-        .map(|e| (e.from, e.to, e.weight))
-        .collect();
+    let edges: Vec<_> = data.graph.edges.iter().map(|e| (e.from, e.to, e.weight)).collect();
 
     HttpResponse::Ok().json(GraphResponse {
         nodes: data.graph.nodes.clone(),

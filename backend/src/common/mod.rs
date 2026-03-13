@@ -1,12 +1,11 @@
-use crate::database::schema::{NodeStatus, Payload};
 use crate::constants::danger::*;
+use crate::database::schema::{NodeStatus, Payload};
 
+pub mod fire_detection;
 pub mod graph;
 pub mod path_finding;
-pub mod fire_detection;
 
 fn danger(payload: &Payload) -> f32 {
-
     if payload.get_status() == NodeStatus::NODEDEAD {
         return f32::INFINITY;
     }
@@ -15,13 +14,11 @@ fn danger(payload: &Payload) -> f32 {
         return f32::INFINITY;
     }
 
-    let temp_score  = payload.temperature / TEMP_MAX_SCORE;
+    let temp_score = payload.temperature / TEMP_MAX_SCORE;
     let smoke_score = payload.smoke / SMOKE_MAX_SCORE;
-    let hum_score   = (HUMIDITY_MAX_SCORE - payload.humidity) / HUMIDITY_MAX_SCORE;
+    let hum_score = (HUMIDITY_MAX_SCORE - payload.humidity) / HUMIDITY_MAX_SCORE;
 
-    let mut danger = temp_score * TEMP_WEIGHT
-                   + smoke_score * SMOKE_WEIGHT
-                   + hum_score;
+    let mut danger = temp_score * TEMP_WEIGHT + smoke_score * SMOKE_WEIGHT + hum_score;
 
     if payload.has_flame() {
         danger += FLAME_PENALTY;

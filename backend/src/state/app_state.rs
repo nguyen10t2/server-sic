@@ -1,27 +1,27 @@
 use dashmap::DashMap;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use crate::constants::building::TOTAL_NODES;
-use crate::database::schema::Payload;
+use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
 use crate::common::graph::Graph;
 use crate::common::path_finding::{self, PathResult};
-use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
+use crate::constants::building::TOTAL_NODES;
+use crate::database::schema::Payload;
 
 /// Struct lưu trữ state chung của ứng dụng
 pub struct AppState {
     /// Lưu trữ dữ liệu mới nhất từ mỗi node_id
     pub latest_data: DashMap<u16, Arc<Payload>>,
-    
+
     /// Mô hình phát hiện cháy
     pub fire_model: FireDetectionModel,
-    
+
     /// Đồ thị toà nhà
     pub graph: Graph,
-    
+
     /// Danh sách kề đã được tính toán trước
     pub adjacency_list: HashMap<u8, Vec<(u8, f32)>>,
-    
+
     /// Lộ trình sơ tán mới nhất (đã được lưu vào bộ nhớ tạm/cache)
     pub cached_path: DashMap<u16, PathResult>,
 }
@@ -30,12 +30,9 @@ impl AppState {
     pub fn new() -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
-        let mut graph = Graph {
-            nodes: vec![],
-            edges: vec![],
-        };
+        let mut graph = Graph { nodes: vec![], edges: vec![] };
         graph.loading_json(graph_json);
-        
+
         let adjacency_list = path_finding::build_adjacency_list(&graph);
 
         Self {
@@ -51,34 +48,34 @@ impl AppState {
     pub fn process_payload(&self, payload: &Payload) -> Option<FireDetectionResult> {
         // 1. Cập nhật dữ liệu mới nhất
         self.latest_data.insert(payload.node_id, Arc::new(payload.clone()));
-        
+
         // 2. Thêm vào mô hình phát hiện cháy
         self.fire_model.add_reading(payload);
-        
+
         // 3. Phát hiện cháy
         let fire_result = self.fire_model.detect(payload.node_id as u16);
-        
+
         // 4. Nếu phát hiện có cháy, cập nhật lộ trình sơ tán
         if fire_result.is_fire {
             self.update_evacuation_paths();
         }
-        
+
         Some(fire_result)
     }
 
     /// Cập nhật lộ trình sơ tán cho tất cả các node
     fn update_evacuation_paths(&self) {
         let exits = path_finding::default_exits();
-        
+
         // Lấy tất cả các node đang có cháy
         let fire_nodes = self.fire_model.get_fire_nodes();
-        
+
         // Với mỗi node bắt đầu tiềm năng (node không có cháy)
         for node_id in 1u16..=TOTAL_NODES {
             if fire_nodes.contains(&node_id) {
                 continue;
             }
-            
+
             // Chạy thuật toán Dijkstra
             if let Some(path) = path_finding::dijkstra(
                 &self.graph,
@@ -98,7 +95,7 @@ impl AppState {
         if let Some(path) = self.cached_path.get(&node_id) {
             return Some(path.clone());
         }
-        
+
         // Nếu không có trong cache, tiến hành tính toán ngay
         let exits = path_finding::default_exits();
         path_finding::dijkstra(

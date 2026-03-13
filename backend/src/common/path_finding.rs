@@ -1,19 +1,19 @@
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::cmp::Ordering;
-use std::sync::Arc;
 use dashmap::DashMap;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::sync::Arc;
 
-use crate::database::schema::Payload;
 use crate::common::graph::Graph;
 use crate::common::weight;
 use crate::constants::{DEFAULT_EXITS, building::DEFAULT_EDGE_WEIGHT};
+use crate::database::schema::Payload;
 
 /// Dijkstra result: path từ start đến nearest exit
 #[derive(Debug, Clone)]
 pub struct PathResult {
-    pub path: Vec<u8>,      // Danh sách các node từ start đến exit
-    pub total_weight: f32,  // Tổng weight của path
-    pub exit_node: u8,      // Exit node mà path dẫn đến
+    pub path: Vec<u8>,     // Danh sách các node từ start đến exit
+    pub total_weight: f32, // Tổng weight của path
+    pub exit_node: u8,     // Exit node mà path dẫn đến
 }
 
 /// Node trong Dijkstra priority queue
@@ -46,10 +46,7 @@ impl Eq for DijkstraNode {}
 
 /// Default payload cho nodes không có trong latest_data
 fn default_payload(node_id: u16) -> Payload {
-    Payload {
-        node_id,
-        ..Default::default()
-    }
+    Payload { node_id, ..Default::default() }
 }
 
 /// Tính weight của edge dựa trên node states
@@ -59,14 +56,15 @@ fn edge_weight(graph: &Graph, from: u8, to: u8, latest_data: &DashMap<u16, Arc<P
         .get(&(from as u16))
         .map(|p| p.value().as_ref().clone())
         .unwrap_or_else(|| default_payload(from as u16));
-    
+
     let payload_to = latest_data
         .get(&(to as u16))
         .map(|p| p.value().as_ref().clone())
         .unwrap_or_else(|| default_payload(to as u16));
 
     // Tìm khoảng cách gốc từ graph
-    let base_distance = graph.edges
+    let base_distance = graph
+        .edges
         .iter()
         .find(|e| (e.from == from && e.to == to) || (e.from == to && e.to == from))
         .map(|e| e.weight)
@@ -91,14 +89,14 @@ pub fn build_adjacency_list(graph: &Graph) -> HashMap<u8, Vec<(u8, f32)>> {
 }
 
 /// Dijkstra tìm đường từ start đến nearest exit
-/// 
+///
 /// # Arguments
 /// * `graph` - Building graph
 /// * `adj` - Pre-built adjacency list
 /// * `start` - Start node ID
 /// * `exits` - List of exit node IDs
 /// * `latest_data` - HashMap chứa latest sensor data từ MQTT
-/// 
+///
 /// # Returns
 /// * `Some(PathResult)` nếu tìm được đường
 /// * `None` nếu không có đường nào đến exits
@@ -128,11 +126,7 @@ pub fn dijkstra(
         // Nếu node hiện tại là exit, dừng và reconstruct path
         if exits.contains(&node) {
             let path = reconstruct_path(&previous, start, node);
-            return Some(PathResult {
-                path,
-                total_weight: cost,
-                exit_node: node,
-            });
+            return Some(PathResult { path, total_weight: cost, exit_node: node });
         }
 
         // Lấy neighbors từ adjacency list
@@ -156,10 +150,7 @@ pub fn dijkstra(
                 if new_cost < old_cost {
                     distances.insert(neighbor, new_cost);
                     previous.insert(neighbor, node);
-                    heap.push(DijkstraNode {
-                        node: neighbor,
-                        cost: new_cost,
-                    });
+                    heap.push(DijkstraNode { node: neighbor, cost: new_cost });
                 }
             }
         }
@@ -212,10 +203,7 @@ mod tests {
     fn test_build_adjacency_list() {
         let graph = Graph {
             nodes: vec![1, 2, 3],
-            edges: vec![
-                Edge { from: 1, to: 2, weight: 4.0 },
-                Edge { from: 2, to: 3, weight: 4.0 },
-            ],
+            edges: vec![Edge { from: 1, to: 2, weight: 4.0 }, Edge { from: 2, to: 3, weight: 4.0 }],
         };
 
         let adj = build_adjacency_list(&graph);
