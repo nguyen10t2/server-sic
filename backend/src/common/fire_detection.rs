@@ -412,4 +412,3 @@ impl Default for FireDetectionModel {
         Self::new()
     }
 }
-

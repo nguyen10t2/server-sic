@@ -1,4 +1,3 @@
-
 use actix_web::{App, HttpServer, web};
 use std::sync::Arc;
 
@@ -39,16 +38,19 @@ async fn main() -> std::io::Result<()> {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as i64;
-            
+
             let timeout_threshold = 15_000; // 15 giây
 
             for mut entry in watchdog_state.latest_data.iter_mut() {
                 let payload = Arc::make_mut(entry.value_mut());
                 if current_time - payload.timestamp > timeout_threshold {
                     if payload.status != 3 {
-                        println!("⚠️ CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.", payload.node_id);
+                        println!(
+                            "⚠️ CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.",
+                            payload.node_id
+                        );
                         payload.status = 3; // NODEDEAD
-                        // Ta có thể gọi process_payload để update lại đồ thị và path, 
+                        // Ta có thể gọi process_payload để update lại đồ thị và path,
                         // nhưng gọi process_payload đòi hỏi &Payload, ta fake 1 lần xử lý:
                         watchdog_state.process_payload(payload);
                     }

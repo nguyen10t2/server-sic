@@ -83,12 +83,12 @@ mod fire_tests {
 }
 
 mod path_tests {
-    use esp32::common::path_finding::*;
-    use esp32::common::graph::{Graph, Edge};
-    use esp32::database::schema::{NodeStatus, Payload};
     use dashmap::DashMap;
-    use std::sync::Arc;
+    use esp32::common::graph::{Edge, Graph};
+    use esp32::common::path_finding::*;
+    use esp32::database::schema::{NodeStatus, Payload};
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     #[test]
     fn test_build_adjacency_list_2() {
@@ -182,11 +182,11 @@ mod new_logics_tests {
 
     #[test]
     fn test_get_direction() {
-        assert_eq!(get_direction(1, 2), "E");   // +1
-        assert_eq!(get_direction(2, 1), "W");   // -1
-        assert_eq!(get_direction(1, 6), "S");   // +5
-        assert_eq!(get_direction(6, 1), "N");   // -5
-        assert_eq!(get_direction(1, 10), "OFF");// invalid distance
+        assert_eq!(get_direction(1, 2), "E"); // +1
+        assert_eq!(get_direction(2, 1), "W"); // -1
+        assert_eq!(get_direction(1, 6), "S"); // +5
+        assert_eq!(get_direction(6, 1), "N"); // -5
+        assert_eq!(get_direction(1, 10), "OFF"); // invalid distance
     }
 
     #[test]

@@ -210,5 +210,3 @@ pub fn get_direction(from: u8, to: u8) -> String {
         "OFF".to_string()
     }
 }
-
-
