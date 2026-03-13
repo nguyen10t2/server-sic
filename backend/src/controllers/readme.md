@@ -18,32 +18,49 @@ Kênh này thay thế cho việc gọi API HTTP liên tục (polling). Nó sẽ 
 **Ví dụ Message Dữ Liệu Cảm Biến Trả Về (Phía Client đón nhận qua `event.data`):**
 ```json
 {
-  "timestamp": 1773373760916,
-  "temperature": 25.15,
-  "humidity": 55.0,
-  "smoke": 0.0,
-  "flame": 0.0,
-  "node_id": 20,
-  "battery": 92,
-  "status": 0
+  "type": "SensorAndPathUpdate",
+  "payload": {
+    "timestamp": 1773421163390,
+    "temperature": 25.15,
+    "humidity": 55.0,
+    "smoke": 0.0,
+    "flame": false,
+    "node_id": 20,
+    "battery": 92,
+    "status": 0
+  },
+  "evacuation_paths": null
 }
 ```
+*(Lưu ý: Nếu có cháy xảy ra, trường `evacuation_paths` sẽ trả về mảng chứa đường đi sơ tán thay vì `null`)*
 
-**Đoạn Code Mẫu Dành Cho Frontend (JavaScript/TypeScript):**
+**Đoạn Code Mẫu Dành Cho Frontend (JavaScript/TypeScript - Chạy với Bun/Node):**
 ```javascript
 const ws = new WebSocket("ws://127.0.0.1:8080/ws");
 
-ws.onopen = () => console.log("✅ WebSocket connected!");
+ws.onopen = () => console.log("WebSocket connected!");
 
 ws.onmessage = (event) => {
   // 1. Xử lý Ping/Pong
-  if (event.data === "pong") return console.log("💓 Heartbeat OK");
+  if (event.data === "pong") return console.log("Heartbeat OK");
 
   // 2. Xử lý cập nhật thông số Node
   try {
-    const rawData = JSON.parse(event.data);
-    console.log(`🔥 [Cập Nhật] Node ${rawData.node_id}: Temp=${rawData.temperature}°C`);
-    // Gắn vào Redux / React State để render UI đổi màu nhiệt độ...
+    const data = JSON.parse(event.data);
+    
+    if (data.type === "SensorAndPathUpdate") {
+      console.log(`\n[Cập Nhật] Node ${data.payload.node_id}: Temp=${data.payload.temperature}°C`);
+      
+      // Nếu có cháy, server sẽ đẩy luôn mảng đường sơ tán về
+      if (data.evacuation_paths) {
+        console.log(`CÓ CHÁY! Nhận được ${data.evacuation_paths.length} đường dẫn sơ tán:`);
+        data.evacuation_paths.forEach(p => {
+           console.log(`Node ${p.node_id} thoát ra cửa số ${p.exit_node} qua đường: [${p.path.join(" -> ")}]`);
+        });
+      } else {
+        console.log("Toà nhà đang an toàn.");
+      }
+    }
   } catch (err) {
     console.error("Lỗi parse JSON: ", err);
   }

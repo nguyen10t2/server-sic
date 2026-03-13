@@ -18,8 +18,13 @@ backend/
 └── rustfmt.toml     # Lựa chọn định dạng mã nguồn bộ định dạng Rust
 ```
 
-* **`src/main.rs`**: Khởi tạo cấu hình và chạy HTTP server với Actix-web.
+* **`src/main.rs`**: Khởi tạo cấu hình và chạy HTTP server với Actix-web. Thiết lập các worker chạy ngầm bằng `tokio::spawn` để xử lý hàng đợi Database và Watchdog.
 * **`src/lib.rs`**: Khai báo và cấu hình các module chức năng chính (controllers, database, services, websocket, v.v.).
+
+## Kiến Trúc Xử Lý Database & Watchdog
+Hệ thống sử dụng luồng thiết kế **Asynchronous queues (hàng đợi bất đồng bộ)** bằng framework `tokio`:
+1. **Batch Insert Database:** Thay vì mở kết nối DB (pool) liên tục ứng với mỗi thông điệp MQTT, server sử dụng `tokio::sync::mpsc::channel` để gom thông điệp. Cứ sau **500ms** hoặc thu thập đủ **50 Payload**, dữ liệu sẽ được đẩy vào Database bằng 1 câu truy vấn `INSERT` chung (`sqlx::QueryBuilder`), khắc phục tình trạng "timeout ngẽn pool kết nối".
+2. **Server-side Timestamp Watchdog:** Để nhận diện chính xác Node chết thay vì bị nhiễu do xung đột đồng hồ trên phần cứng (ESP32 `millis()`), backend tự động gán nhãn thời gian Epoch hệ thống (`SystemTime::now`) vào gói tin ngay lập tức khi MQTT tiếp nhận. Logic này xử lý chuẩn xác độ ổn định của Watchdog 15 giây.
 
 ## Kết Nối WebSocket Thời Gian Thực (`/ws`)
 
@@ -32,9 +37,10 @@ Hệ thống hỗ trợ giao tiếp hai chiều theo thời gian thực (real-ti
 Dự án được tổ chức và kiểm thử một cách bài bản nhằm đảm bảo chất lượng và độ ổn định của hệ thống:
 
 - **Unit tests (Kiểm thử đơn vị)**: Cùng nằm trong thư mục `src/`, thường cấu hình bằng `#![cfg(test)]` cạnh mã nguồn gốc.
-- **Integration tests (Kiểm thử tích hợp)**: Được đặt gọn gàng trong thư mục `tests/`. Nó giúp kiểm định quy trình hoạt động giữa các modules với nhau một cách độc lập:
-  - `tests/api_tests.rs`: Kiểm thử trực tiếp lên các route REST API và các logic yêu cầu/phản hồi (Request/Response).
+- **Integration & Concurrent tests (Kiểm thử tích hợp & Tương tác đồng thời)**: Được đặt trong thư mục `tests/`. Nó giúp kiểm định quy trình hoạt động giữa các modules với nhau:
+  - `tests/api_tests.rs`: Kiểm thử trực tiếp lên các route REST API.
   - `tests/common_tests.rs`: Chứa các kiểm thử liên quan đến logic hoặc các tiện ích dùng chung xuyên suốt backend.
+  - `tests/deadlock_test.rs`: Mô phỏng tải lưu lượng mạng (stress test) đa nguồn (hàng trăm Async Worker thread gửi thông điệp kẹt cùng lúc) để phòng ngừa xung đột bộ nhớ và kiểm thử hệ khả năng không bị lỗi Deadlock của luồng `DashMap` và luồng thuật toán Dijkstra. Môi trường này sử dụng mô hình lập lịch ảo chặn luồng.
 
 ### Cách Chạy Kiểm Thử
 
