@@ -1,16 +1,73 @@
-# Web Controllers API (REST Endpoints)
+# Web Controllers API & WebSocket
 
-Thư mục này chịu trách nhiệm phục vụ các Endpoint giao tiếp với Client bên ngoài qua giao thức HTTP (sử dụng thư viện `actix-web`). Mọi dữ liệu trả về đều dưới dạng JSON (dùng `serde`).
+Thư mục này chịu trách nhiệm phục vụ các Endpoint kết nối với Client ngoài (Frontend UI, Mobile...) qua giao thức HTTP (sử dụng thư viện `actix-web`) và kết nối trực tuyến qua **WebSocket (`actix-ws`)**. Mọi dữ liệu giao tiếp đều được chuẩn hóa dưới định dạng JSON (`serde`).
 
-## Danh Sách Rest API
+Tài liệu này được biên soạn để đội ngũ Frontend (React/Vue/v.v..) nắm rõ chuẩn kết nối và tích hợp.
 
-Dưới đây là định nghĩa và các ví dụ về cách gọi các Endpoints.
+---
 
-### 1. Trạng Thái Cảm Biến Của Các Node
-**Tuyến Đường:** `GET /api/status`
-**Chức Năng:** Lấy các thiết lập đo lường/cảm biến cuối cùng được gửi từ *tất cả* các Node ESP32 có mặt ở hệ thống (trong cache memory).
+## 🔌 Kênh Kết Nối WebSocket (Real-time Stream)
+Kênh này thay thế cho việc gọi API HTTP liên tục (polling). Nó sẽ chủ động đẩy dữ liệu (Push) cho Frontend ngay khi các thiết bị nhúng (ESP32) phát tín hiệu mới.
 
-**Ví Dụ Response:**
+* **Đường dẫn (URL):** `ws://<SERVER_IP>:<PORT>/ws` (Sử dụng `wss://` nếu đã cấu hình SSL).
+* **Luồng hoạt động:** 
+  - Khi một ESP32 gửi bản tin MQTT lên cloud, hệ thống Actix sẽ đẩy ngay bản tin đó đến mọi Frontend đang bắt tay (subscribe) qua WebSocket này.
+* **Cơ chế Heartbeat (Ping/Pong):**
+  - Tránh bị dính timeout từ trình duyệt, phía Frontend có thể gửi chuỗi `"ping"`. Server ngay lập tức phản hồi chuỗi `"pong"`.
+
+**Ví dụ Message Dữ Liệu Cảm Biến Trả Về (Phía Client đón nhận qua `event.data`):**
+```json
+{
+  "timestamp": 1773373760916,
+  "temperature": 25.15,
+  "humidity": 55.0,
+  "smoke": 0.0,
+  "flame": 0.0,
+  "node_id": 20,
+  "battery": 92,
+  "status": 0
+}
+```
+
+**Đoạn Code Mẫu Dành Cho Frontend (JavaScript/TypeScript):**
+```javascript
+const ws = new WebSocket("ws://127.0.0.1:8080/ws");
+
+ws.onopen = () => console.log("✅ WebSocket connected!");
+
+ws.onmessage = (event) => {
+  // 1. Xử lý Ping/Pong
+  if (event.data === "pong") return console.log("💓 Heartbeat OK");
+
+  // 2. Xử lý cập nhật thông số Node
+  try {
+    const rawData = JSON.parse(event.data);
+    console.log(`🔥 [Cập Nhật] Node ${rawData.node_id}: Temp=${rawData.temperature}°C`);
+    // Gắn vào Redux / React State để render UI đổi màu nhiệt độ...
+  } catch (err) {
+    console.error("Lỗi parse JSON: ", err);
+  }
+};
+
+// Duy trì kết nối bằng cách ping mỗi 30 giây
+const heartbeat = setInterval(() => {
+  if (ws.readyState === WebSocket.OPEN) ws.send("ping");
+}, 30000);
+
+ws.onclose = () => clearInterval(heartbeat);
+```
+
+---
+
+## 🌐 Danh Sách API REST (HTTP Endpoints)
+
+Dưới đây là các Endpoints gọi một lần (One-time fetch), chủ yếu dùng lúc màn hình Frontend **vừa mới tải hoặc load lần đầu** để vẽ được nền tảng sơ đồ, sau đó WebSocket ở trên sẽ lo việc cập nhật thay đổi nhỏ.
+
+### 1. Trạng Thái Cảm Biến Cuối Của Tất Cả Các Node
+* **Tuyến Đường:** `GET /api/status`
+* **Mục đích:** Khi người dùng F5 hoặc vừa vào Web, gọi cái này để vẽ tức thì ra thông số lần chót của tất cả các phòng/Node thay vì phải đợi tín hiệu WebSocket đến lắt nhắt.
+
+**Phản hồi:**
 ```json
 [
   {
@@ -27,10 +84,10 @@ Dưới đây là định nghĩa và các ví dụ về cách gọi các Endpoin
 ```
 
 ### 2. Tình Hình Cháy Hiện Tại Toàn Cục
-**Tuyến Đường:** `GET /api/fire/status`
-**Chức Năng:** Trả về một bảng phân tích sự biến đổi của tất cả các Node cảm biến và độ tin cậy rủi ro theo "Chỉ Số Cháy" đã được tính toán bởi thuật toán mô hình AI cảnh báo.
+* **Tuyến Đường:** `GET /api/fire/status`
+* **Mục đích:** Trả về tất cả các Node bị hệ thống AI phán đoán là Đang Cháy/Nguy Hiểm cùng với trọng số (risk_level).
 
-**Ví Dụ Response:**
+**Phản hồi:**
 ```json
 {
   "has_fire": true,
@@ -41,11 +98,8 @@ Dưới đây là định nghĩa và các ví dụ về cách gọi các Endpoin
       "is_fire": true,
       "risk_level": "Critical",
       "details": {
-         "temperature_score": 1,
-         "smoke_score": 1,
-         "humidity_score": 0.1,
-         "flame_factor": 1,
-         "trend_factor": 0.95,
+         "temperature_score": 1.0,
+         "smoke_score": 1.0,
          "anomaly_score": 0.15
       }
     }
@@ -53,27 +107,11 @@ Dưới đây là định nghĩa và các ví dụ về cách gọi các Endpoin
 }
 ```
 
-### 3. Lấy Lộ Trình Sơ Tán Của Một Node (Căn Phòng)
-**Tuyến Đường:** `GET /api/evacuate/{node_id}`
-**Ví Dụ Gọi:** `GET /api/evacuate/5` (Sơ tán từ nút số 5 ra ngoài điểm gần nhất).
-**Chức Năng:** Giao cho AI tìm đường ngắn nhất, an toàn nhất (tránh những node đang có trạng thái Critical) dựa trên thuật toán Dijkstra kèm theo "Danger Weight".
+### 3. Sơ Tán Tổng Thể Đại Trà Toàn Tòa Nhà
+* **Tuyến Đường:** `GET /api/evacuate/all`
+* **Mục đích:** Frontend gọi API này để tự động dựng các "Đường dẫn mũi tên chạy trốn" trên đồ họa React 2D/3D cho toàn bộ những phòng chưa cháy tới điểm thoát hiểm an toàn nhất (mỗi object là của 1 sinh mạng/node).
 
-**Ví Dụ Response:**
-```json
-{
-  "node_id": 5,
-  "path": [5, 4, 3, 2, 1],
-  "total_weight": 16.0,
-  "exit_node": 1,
-  "has_fire": true
-}
-```
-
-### 4. Lấy Lộ Trình Của Toàn Bộ Các Nút
-**Tuyến Đường:** `GET /api/evacuate/all`
-**Chức Năng:** Trả về danh sách chi tiết của mảng `paths` đối với tất cả các nút cùng lúc (trừ những nút đã bị thiêu rụi). Tối ưu cho Frontend render bản đồ tổng.
-
-**Ví dụ Response:**
+**Phản hồi:**
 ```json
 {
   "has_fire": false,
@@ -94,11 +132,27 @@ Dưới đây là định nghĩa và các ví dụ về cách gọi các Endpoin
 }
 ```
 
-### 5. Thông Tin Bản Đồ Của Toà Nhà
-**Tuyến Đường:** `GET /api/building/graph`
-**Chức Năng:** Cho phép truy vấn tất cả các đỉnh (nodes), các cạnh khoảng cách mặc định (edges) và các lối thoát (exits nodes) được thiết lập tại Server. (Phục vụ việc vẽ Node Graph ở Frontend React).
+### 4. Tìm Đường Sơ Tán Của Một Node Riêng Lẻ
+* **Tuyến Đường:** `GET /api/evacuate/{node_id}`
+* **Ví Dụ Query:** `GET /api/evacuate/5` (Sơ tán từ nút số 5)
+* **Mục đích:** Người dùng click vào một phòng bảo vệ trên bản đồ UI và yêu cầu "Tôi đang ở đây, chỉ tôi đường chui ra khỏi tòa nhà gần nhất nhạy bén nhất".
 
-**Ví Dụ Phản Hồi:**
+**Phản hồi:**
+```json
+{
+  "node_id": 5,
+  "path": [5, 4, 3, 2, 1],
+  "total_weight": 16.0,
+  "exit_node": 1,
+  "has_fire": true
+}
+```
+
+### 5. Khung Xương Bản Đồ (Nodes, Edges, Exits)
+* **Tuyến Đường:** `GET /api/building/graph`
+* **Mục đích:** Cung cấp thông số "hình học" để Frontend vẽ các hình tròn (Node), nét nối (Edge Cạnh) và cửa ra (Exit) lên file UI Vector. Đây là xương sống cấu trúc tĩnh.
+
+**Phản hồi:**
 ```json
 {
   "nodes": [1, 2, 3, 4, 5],

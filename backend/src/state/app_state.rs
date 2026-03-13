@@ -24,6 +24,9 @@ pub struct AppState {
 
     /// Lộ trình sơ tán mới nhất (đã được lưu vào bộ nhớ tạm/cache)
     pub cached_path: DashMap<u16, PathResult>,
+
+    /// Kênh broadcast để đẩy dữ liệu tới các kết nối WebSocket realtime
+    pub tx: tokio::sync::broadcast::Sender<Arc<Payload>>,
 }
 
 impl AppState {
@@ -35,12 +38,15 @@ impl AppState {
 
         let adjacency_list = path_finding::build_adjacency_list(&graph);
 
+        let (tx, _rx) = tokio::sync::broadcast::channel(100);
+
         Self {
             latest_data: DashMap::new(),
             fire_model: FireDetectionModel::new(),
             graph,
             adjacency_list,
             cached_path: DashMap::new(),
+            tx,
         }
     }
 

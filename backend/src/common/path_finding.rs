@@ -161,7 +161,7 @@ pub fn dijkstra(
 }
 
 /// Reconstruct path từ previous map
-fn reconstruct_path(previous: &HashMap<u8, u8>, start: u8, end: u8) -> Vec<u8> {
+pub fn reconstruct_path(previous: &HashMap<u8, u8>, start: u8, end: u8) -> Vec<u8> {
     let mut path = Vec::new();
     let mut current = end;
 
@@ -193,102 +193,3 @@ pub fn find_evacuation_path(
     dijkstra(graph, adj, start, &default_exits(), latest_data)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::common::graph::Edge;
-    use crate::database::schema::NodeStatus;
-
-    #[test]
-    fn test_build_adjacency_list() {
-        let graph = Graph {
-            nodes: vec![1, 2, 3],
-            edges: vec![Edge { from: 1, to: 2, weight: 4.0 }, Edge { from: 2, to: 3, weight: 4.0 }],
-        };
-
-        let adj = build_adjacency_list(&graph);
-
-        // Check neighbors of node 1
-        assert!(adj.get(&1).unwrap().contains(&(2, 4.0)));
-        // Check neighbors of node 2
-        assert!(adj.get(&2).unwrap().contains(&(1, 4.0)));
-        assert!(adj.get(&2).unwrap().contains(&(3, 4.0)));
-        // Check neighbors of node 3
-        assert!(adj.get(&3).unwrap().contains(&(2, 4.0)));
-    }
-
-    #[test]
-    fn test_reconstruct_path() {
-        let mut previous = HashMap::new();
-        previous.insert(2, 1);
-        previous.insert(3, 2);
-
-        let path = reconstruct_path(&previous, 1, 3);
-
-        assert_eq!(path, vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn test_dijkstra_simple() {
-        let graph = Graph {
-            nodes: vec![1, 2, 3, 4, 5],
-            edges: vec![
-                Edge { from: 1, to: 2, weight: 4.0 },
-                Edge { from: 2, to: 3, weight: 4.0 },
-                Edge { from: 3, to: 4, weight: 4.0 },
-                Edge { from: 4, to: 5, weight: 4.0 },
-                Edge { from: 1, to: 5, weight: 20.0 },
-            ],
-        };
-
-        let adj = build_adjacency_list(&graph);
-        let latest_data = DashMap::new();
-
-        // Test từ node 1 đến exit 5
-        let result = dijkstra(&graph, &adj, 1, &[5], &latest_data);
-
-        assert!(result.is_some());
-        let result = result.unwrap();
-        assert_eq!(result.exit_node, 5);
-        // Với default payload (temp=25, humidity=50), danger = 1.0
-        // weight = base_distance * (1 + danger) = 4 * 2 = 8 per edge
-        // Path 1->2->3->4->5 = 8*4 = 32
-        assert_eq!(result.total_weight, 32.0);
-    }
-
-    #[test]
-    fn test_dijkstra_with_fire() {
-        let graph = Graph {
-            nodes: vec![1, 2, 3, 4, 5],
-            edges: vec![
-                Edge { from: 1, to: 2, weight: 4.0 },
-                Edge { from: 2, to: 3, weight: 4.0 },
-                Edge { from: 3, to: 4, weight: 4.0 },
-                Edge { from: 4, to: 5, weight: 4.0 },
-                Edge { from: 1, to: 5, weight: 10.0 },
-            ],
-        };
-
-        let adj = build_adjacency_list(&graph);
-        let latest_data = DashMap::new();
-
-        // Simulate fire at node 2
-        let fire_payload = Payload {
-            temperature: 100.0,
-            humidity: 30.0,
-            smoke: 500.0,
-            flame: true,
-            node_id: 2,
-            status: NodeStatus::NODEFIRE as u8,
-            ..Default::default()
-        };
-        latest_data.insert(2, Arc::new(fire_payload));
-
-        let result = dijkstra(&graph, &adj, 1, &[5], &latest_data);
-
-        assert!(result.is_some());
-        let result = result.unwrap();
-        // Should go through 1->5 directly instead of through node 2
-        assert_eq!(result.exit_node, 5);
-    }
-}

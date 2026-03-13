@@ -1,6 +1,64 @@
 use crate::common::fire_detection::FireDetectionResult;
 use crate::state::app_state::AppState;
-use actix_web::{HttpResponse, Responder, get, web};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use futures_util::StreamExt as _;
+
+/// WebSocket endpoint for real-time sensor updates
+#[get("/ws")]
+pub async fn ws_index(
+    req: HttpRequest,
+    stream: web::Payload,
+    app_state: web::Data<AppState>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (res, mut session, mut msg_stream) = actix_ws::handle(&req, stream)?;
+    let mut rx = app_state.tx.subscribe();
+
+    actix_web::rt::spawn(async move {
+        loop {
+            tokio::select! {
+                // Receive message from client
+                Some(Ok(msg)) = msg_stream.next() => {
+                    match msg {
+                        actix_ws::Message::Ping(bytes) => {
+                            if session.pong(&bytes).await.is_err() {
+                                break;
+                            }
+                        }
+                        actix_ws::Message::Text(text) => {
+                            if text == "ping" {
+                                let _ = session.text("pong").await;
+                            }
+                        }
+                        actix_ws::Message::Close(reason) => {
+                            let _ = session.close(reason).await;
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                
+                // Receive payload from MQTT broadcast
+                Ok(payload) = rx.recv() => {
+                    let json = match serde_json::to_string(&*payload) {
+                        Ok(json) => json,
+                        Err(e) => {
+                            eprintln!("Failed to serialize payload: {}", e);
+                            continue;
+                        }
+                    };
+
+                    if session.text(json).await.is_err() {
+                        break;
+                    }
+                }
+
+                else => break,
+            }
+        }
+    });
+
+    Ok(res)
+}
 
 /// Lấy tất cả dữ liệu sensor mới nhất
 #[get("/api/status")]

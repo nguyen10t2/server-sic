@@ -39,6 +39,9 @@ pub async fn run_mqtt_client(
             // Process payload: update data, run fire detection, update path if needed
             state.process_payload(&payload);
 
+            // Broadcast real-time message to active WebSocket connections
+            let _ = state.tx.send(payload.clone());
+
             tokio::spawn({
                 let payload = payload.clone();
                 async move {
