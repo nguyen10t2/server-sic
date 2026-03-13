@@ -6,7 +6,7 @@ use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
 use crate::common::graph::Graph;
 use crate::common::path_finding::{self, PathResult};
 use crate::constants::building::TOTAL_NODES;
-use crate::database::schema::Payload;
+use crate::database::schema::{Payload, WsMessage};
 
 /// Struct lưu trữ state chung của ứng dụng
 pub struct AppState {
@@ -26,14 +26,16 @@ pub struct AppState {
     pub cached_path: DashMap<u16, PathResult>,
 
     /// Kênh broadcast để đẩy dữ liệu tới các kết nối WebSocket realtime
-    pub tx: tokio::sync::broadcast::Sender<Arc<Payload>>,
+    pub tx: tokio::sync::broadcast::Sender<Arc<WsMessage>>,
 
     /// Client MQTT để gửi lệnh (command) xuống dưới các node
     pub mqtt_client: Option<rumqttc::AsyncClient>,
+
+    pub db_tx: tokio::sync::mpsc::Sender<Payload>,
 }
 
 impl AppState {
-    pub fn new(mqtt_client: Option<rumqttc::AsyncClient>) -> Self {
+    pub fn new(mqtt_client: Option<rumqttc::AsyncClient>, db_tx: tokio::sync::mpsc::Sender<Payload>) -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
         let mut graph = Graph { nodes: vec![], edges: vec![] };
@@ -51,6 +53,7 @@ impl AppState {
             cached_path: DashMap::new(),
             tx,
             mqtt_client,
+            db_tx,
         }
     }
 
@@ -65,10 +68,31 @@ impl AppState {
         // 3. Phát hiện cháy
         let fire_result = self.fire_model.detect(payload.node_id as u16);
 
+        let mut current_paths_payload = None;
+
         // 4. Nếu phát hiện có cháy, cập nhật lộ trình sơ tán
         if fire_result.is_fire {
             self.update_evacuation_paths();
+
+            // Extract the paths here to be broadcasted with WS
+            let paths: Vec<_> = self.cached_path.iter().map(|entry| {
+                serde_json::json!({
+                    "node_id": *entry.key(),
+                    "path": entry.value().path.clone(),
+                    "total_weight": entry.value().total_weight,
+                    "exit_node": entry.value().exit_node,
+                })
+            }).collect();
+            current_paths_payload = Some(paths);
         }
+
+        // --- Bắn dữ liệu ra WebSocket ---
+        let ws_msg = WsMessage {
+            r#type: "SensorAndPathUpdate".to_string(),
+            payload: payload.clone(),
+            evacuation_paths: current_paths_payload,
+        };
+        let _ = self.tx.send(Arc::new(ws_msg));
 
         self.send_command_to_node(payload.node_id);
 
@@ -161,6 +185,7 @@ impl AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        Self::new(None)
+        let (db_tx, _) = tokio::sync::mpsc::channel(1);
+        Self::new(None, db_tx)
     }
 }

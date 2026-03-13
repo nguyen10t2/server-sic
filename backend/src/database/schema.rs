@@ -55,6 +55,14 @@ pub struct CommandPayload {
     pub dir: String,
 }
 
+/// Dữ liệu WebSocket gửi lên Frontend
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WsMessage {
+    pub r#type: String,
+    pub payload: Payload,
+    pub evacuation_paths: Option<Vec<serde_json::Value>>,
+}
+
 impl Default for Payload {
     fn default() -> Self {
         use crate::constants::defaults;

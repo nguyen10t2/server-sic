@@ -39,17 +39,28 @@ pub async fn ws_index(
                 }
 
                 // Receive payload from MQTT broadcast
-                Ok(payload) = rx.recv() => {
-                    let json = match serde_json::to_string(&*payload) {
-                        Ok(json) => json,
-                        Err(e) => {
-                            error!("Failed to serialize payload: {}", e);
+                result = rx.recv() => {
+                    match result {
+                        Ok(payload) => {
+                            let json = match serde_json::to_string(&*payload) {
+                                Ok(json) => json,
+                                Err(e) => {
+                                    error!("Failed to serialize payload: {}", e);
+                                    continue;
+                                }
+                            };
+
+                            if session.text(json).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                            // Ignore lagged errors and just skip over dropped messages
                             continue;
                         }
-                    };
-
-                    if session.text(json).await.is_err() {
-                        break;
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                            break;
+                        }
                     }
                 }
 

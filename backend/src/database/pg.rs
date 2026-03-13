@@ -38,4 +38,30 @@ impl PayloadRepository {
         .await?;
         Ok(())
     }
+
+    pub async fn save_payloads_batch(&self, payloads: &[Payload]) -> anyhow::Result<()> {
+        if payloads.is_empty() {
+            return Ok(());
+        }
+
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO payloads (timestamp, temperature, humidity, smoke, flame, node_id, battery, status) "
+        );
+
+        query_builder.push_values(payloads, |mut b, payload| {
+            b.push_bind(payload.timestamp)
+             .push_bind(payload.temperature)
+             .push_bind(payload.humidity)
+             .push_bind(payload.smoke)
+             .push_bind(payload.flame)
+             .push_bind(payload.node_id as i32)
+             .push_bind(payload.battery as i32)
+             .push_bind(payload.status as i32);
+        });
+
+        let query = query_builder.build();
+        query.execute(&self.pool).await?;
+
+        Ok(())
+    }
 }

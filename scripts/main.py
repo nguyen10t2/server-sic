@@ -5,7 +5,7 @@ import random
 import os
 import heapq
 
-BROKER = "f5.soict.io"
+BROKER = "localhost"
 PORT = 1883
 BASE_TOPIC = "fire/"
 
@@ -175,7 +175,7 @@ def run_simulation():
                 else:
                     print(f"Node {node_id:2} -> Bình thường")
 
-                time.sleep(random.uniform(0.2, 0.4))
+                time.sleep(random.uniform(0.5, 0.8))
 
             print("-" * 40)
 

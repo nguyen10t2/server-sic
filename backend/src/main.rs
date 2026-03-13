@@ -37,8 +37,43 @@ async fn main() -> std::io::Result<()> {
     mqttoptions.set_keep_alive(Duration::from_secs(esp32::constants::mqtt::KEEP_ALIVE_SECS));
     let (mqtt_client, eventloop) = AsyncClient::new(mqttoptions, 10);
 
+    // Bắt đầu MPSC để xử lý tác vụ ghi DB dạng queue
+    let (db_tx, mut db_rx) = tokio::sync::mpsc::channel::<esp32::database::schema::Payload>(1000);
+    
+    // --- DB WORKER: Xử lý Ghi DB Batch/Queue ---
+    let db_repo_clone = payload_repo.clone();
+    tokio::spawn(async move {
+        let mut batch = Vec::new();
+        let batch_size = 50;
+        let timeout_duration = std::time::Duration::from_millis(500);
+
+        loop {
+            match tokio::time::timeout(timeout_duration, db_rx.recv()).await {
+                Ok(Some(payload)) => {
+                    batch.push(payload);
+                    if batch.len() >= batch_size {
+                        if let Err(e) = db_repo_clone.save_payloads_batch(&batch).await {
+                            log::error!("DB batch insert failed: {:?}", e);
+                        }
+                        batch.clear();
+                    }
+                }
+                Ok(None) => break, // Channel bị đóng
+                Err(_) => {
+                    // Xảy ra timeout (đã qua 500ms)
+                    if !batch.is_empty() {
+                        if let Err(e) = db_repo_clone.save_payloads_batch(&batch).await {
+                            log::error!("DB batch insert failed (on timeout): {:?}", e);
+                        }
+                        batch.clear();
+                    }
+                }
+            }
+        }
+    });
+
     // Khởi tạo state chung
-    let shared_state = Arc::new(AppState::new(Some(mqtt_client.clone())));
+    let shared_state = Arc::new(AppState::new(Some(mqtt_client.clone()), db_tx));
 
     // --- WATCHDOG: Kiểm tra Node mất mạng/chết ---
     let watchdog_state = shared_state.clone();
@@ -53,20 +88,25 @@ async fn main() -> std::io::Result<()> {
 
             let timeout_threshold = 15_000; // 15 giây
 
+            // Lấy ra các nodes bị timeout để xử lý riêng
+            let mut dead_payloads = Vec::new();
             for mut entry in watchdog_state.latest_data.iter_mut() {
                 let payload = Arc::make_mut(entry.value_mut());
                 if current_time - payload.timestamp > timeout_threshold {
-                    if payload.status != 3 {
+                    if payload.status != 3 { // status == 3 indicates NODEDEAD
                         info!(
                             "CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.",
                             payload.node_id
                         );
-                        payload.status = 3; // NODEDEAD
-                        // Ta có thể gọi process_payload để update lại đồ thị và path,
-                        // nhưng gọi process_payload đòi hỏi &Payload, ta fake 1 lần xử lý:
-                        watchdog_state.process_payload(payload);
+                        payload.status = 3; // Mark as NODEDEAD
+                        dead_payloads.push(payload.clone());
                     }
                 }
+            }
+
+            // Xử lý payloads mà không giữ lock iter_mut() trên DashMap
+            for payload in dead_payloads {
+                watchdog_state.process_payload(&payload);
             }
         }
     });
@@ -74,7 +114,7 @@ async fn main() -> std::io::Result<()> {
     // Chạy MQTT ở background
     let mqtt_state = shared_state.clone();
     tokio::spawn(async move {
-        esp32::mqtt::run_mqtt_client(mqtt_state, payload_repo, mqtt_client, eventloop).await;
+        esp32::mqtt::run_mqtt_client(mqtt_state, mqtt_client, eventloop).await;
     });
 
     // Chạy Web Server
