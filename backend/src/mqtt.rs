@@ -1,3 +1,4 @@
+use log::error;
 use rumqttc::{AsyncClient, Event, Packet, QoS};
 use std::sync::Arc;
 
@@ -21,7 +22,7 @@ pub async fn run_mqtt_client(
             let payload: Payload = match serde_json::from_slice::<Payload>(&p.payload) {
                 Ok(v) => v,
                 Err(_) => {
-                    println!("Failed to parse payload: {:?}", p.payload);
+                    error!("Failed to parse payload: {:?}", p.payload);
                     continue;
                 }
             };
@@ -41,7 +42,7 @@ pub async fn run_mqtt_client(
                 let payload = payload.clone();
                 async move {
                     if let Err(e) = repo.save_payload(&payload).await {
-                        eprintln!("Failed to save payload to database: {:?}", e);
+                        error!("Failed to save payload to database: {:?}", e);
                     }
                 }
             });

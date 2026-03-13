@@ -2,6 +2,7 @@ use crate::common::fire_detection::FireDetectionResult;
 use crate::state::app_state::AppState;
 use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use futures_util::StreamExt as _;
+use log::error;
 
 /// WebSocket endpoint for real-time sensor updates
 #[get("/ws")]
@@ -42,7 +43,7 @@ pub async fn ws_index(
                     let json = match serde_json::to_string(&*payload) {
                         Ok(json) => json,
                         Err(e) => {
-                            eprintln!("Failed to serialize payload: {}", e);
+                            error!("Failed to serialize payload: {}", e);
                             continue;
                         }
                     };
