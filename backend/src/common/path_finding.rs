@@ -193,3 +193,22 @@ pub fn find_evacuation_path(
     dijkstra(graph, adj, start, &default_exits(), latest_data)
 }
 
+/// Tính toán hướng đi (N, S, E, W) cho con LED matrix theo grid 4x5
+pub fn get_direction(from: u8, to: u8) -> String {
+    let from_i16 = from as i16;
+    let to_i16 = to as i16;
+
+    if to_i16 == from_i16 + 1 {
+        "E".to_string()
+    } else if to_i16 == from_i16 - 1 {
+        "W".to_string()
+    } else if to_i16 == from_i16 + 5 {
+        "S".to_string() // Số to xuống dưới (Nam)
+    } else if to_i16 == from_i16 - 5 {
+        "N".to_string() // Số bé lên trên (Bắc)
+    } else {
+        "OFF".to_string()
+    }
+}
+
+

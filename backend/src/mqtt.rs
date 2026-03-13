@@ -1,8 +1,7 @@
-use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
+use rumqttc::{AsyncClient, Event, Packet, QoS};
 use std::sync::Arc;
-use std::time::Duration;
 
-use crate::constants::mqtt::{KEEP_ALIVE_SECS, TOPIC_PATTERN};
+use crate::constants::mqtt::TOPIC_PATTERN;
 use crate::database::pg::PayloadRepository;
 use crate::database::schema::Payload;
 use crate::state::app_state::AppState;
@@ -12,13 +11,9 @@ use crate::state::app_state::AppState;
 pub async fn run_mqtt_client(
     state: Arc<AppState>,
     repo: Arc<PayloadRepository>,
-    mqtt_broker: &str,
-    mqtt_port: u16,
+    client: AsyncClient,
+    mut eventloop: rumqttc::EventLoop,
 ) {
-    let mut mqttoptions = MqttOptions::new("rust-backend", mqtt_broker, mqtt_port);
-    mqttoptions.set_keep_alive(Duration::from_secs(KEEP_ALIVE_SECS));
-
-    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
     client.subscribe(TOPIC_PATTERN, QoS::AtMostOnce).await.unwrap();
 
     loop {

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 #[actix_web::test]
 async fn test_get_status() {
-    let state = Arc::new(AppState::new());
+    let state = Arc::new(AppState::default());
     let app = test::init_service(
         App::new()
             .app_data(web::Data::from(state.clone()))
@@ -21,7 +21,7 @@ async fn test_get_status() {
 
 #[actix_web::test]
 async fn test_get_fire_status() {
-    let state = Arc::new(AppState::new());
+    let state = Arc::new(AppState::default());
     let app = test::init_service(
         App::new()
             .app_data(web::Data::from(state.clone()))
@@ -36,7 +36,7 @@ async fn test_get_fire_status() {
 
 #[actix_web::test]
 async fn test_get_evacuation_path() {
-    let state = std::sync::Arc::new(AppState::new());
+    let state = std::sync::Arc::new(AppState::default());
     let app = actix_web::test::init_service(
         App::new()
             .app_data(web::Data::from(state.clone()))
@@ -51,7 +51,7 @@ async fn test_get_evacuation_path() {
 
 #[actix_web::test]
 async fn test_get_all_evacuation_paths() {
-    let state = std::sync::Arc::new(AppState::new());
+    let state = std::sync::Arc::new(AppState::default());
     let app = actix_web::test::init_service(
         App::new()
             .app_data(web::Data::from(state.clone()))
@@ -65,7 +65,7 @@ async fn test_get_all_evacuation_paths() {
 
 #[actix_web::test]
 async fn test_get_building_graph() {
-    let state = std::sync::Arc::new(AppState::new());
+    let state = std::sync::Arc::new(AppState::default());
     let app = actix_web::test::init_service(
         App::new()
             .app_data(web::Data::from(state.clone()))

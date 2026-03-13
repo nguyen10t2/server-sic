@@ -2,193 +2,50 @@ import paho.mqtt.client as mqtt
 import json
 import time
 import random
-from collections import defaultdict
 
-# Cấu hình
-BROKER = "localhost"
+BROKER = "127.0.0.1"
 PORT = 1883
-TOPIC_PREFIX = "fire"
+TOPIC = "esp32/sensors"
 
-# Graph adjacency (building layout)
-# Node gần nhau sẽ lan cháy
-ADJACENCY = {
-    1: [2, 6],
-    2: [1, 3, 7],
-    3: [2, 4, 8],
-    4: [3, 5, 9],
-    5: [4, 10],
+client = mqtt.Client()
+client.connect(BROKER, PORT, 60)
+
+def generate_payload(node_id):
+    # Lấy thời gian thực (millisecond)
+    timestamp = int(time.time() * 1000)
     
-    6: [1, 7, 11],
-    7: [2, 6, 8, 12],
-    8: [3, 7, 9, 13],
-    9: [4, 8, 10, 14],
-    10: [5, 9, 15],
+    # Giả lập 1 node (Ví dụ node 8) đang bị cháy
+    is_fire = (node_id == 8)
     
-    11: [6, 12, 16],
-    12: [7, 11, 13, 17],
-    13: [8, 12, 14, 18],
-    14: [9, 13, 15, 19],
-    15: [10, 14, 20],
-    
-    16: [11, 17],
-    17: [12, 16, 18],
-    18: [13, 17, 19],
-    19: [14, 18, 20],
-    20: [15, 19],
-}
+    return {
+        "timestamp": timestamp,
+        "temperature": random.uniform(80.0, 100.0) if is_fire else random.uniform(24.0, 26.0),
+        "humidity": random.uniform(30.0, 40.0) if is_fire else random.uniform(50.0, 60.0),
+        "smoke": random.uniform(300.0, 600.0) if is_fire else 0.0,
+        "flame": True if is_fire else False,
+        "node_id": node_id,
+        "battery": random.randint(80, 100),
+        "status": 2 if is_fire else 0
+    }
 
-# Fire propagation parameters
-ALPHA = 0.05   # Temperature influence
-BETA = 0.02    # Smoke influence  
-GAMMA = 0.5    # Neighbor fire influence
-
-# Thresholds
-TEMP_IGNITE = 70.0    # Nhiệt độ bắt đầu cháy
-SMOKE_IGNITE = 400.0  # Smoke bắt đầu cháy
-
-class FireSimulator:
-    def __init__(self):
-        # Node states: {node_id: {temp, smoke, flame, humidity, battery, status}}
-        self.nodes = {}
-        self.fire_nodes = set()  # Nodes đang cháy
-        
-        # Initialize all nodes
+try:
+    print("🚀 Bắt đầu gửi dữ liệu MQTT giả lập (Nhấn Ctrl+C để dừng)...")
+    while True:
+        # Gửi tuần tự cho 20 node (Nhưng bỏ qua node 12 để test Watchdog Dead Node)
         for node_id in range(1, 21):
-            self.nodes[node_id] = {
-                'temperature': 25.0,
-                'humidity': 55.0,
-                'smoke': 0.0,
-                'flame': False,
-                'battery': 92,
-                'status': 0,  # NODEALIVE
-            }
-        
-        # Start fire at node 8 (middle of building)
-        self.start_fire(8)
-    
-    def start_fire(self, node_id):
-        """Bắt đầu cháy tại một node"""
-        self.nodes[node_id]['temperature'] = 85.0
-        self.nodes[node_id]['smoke'] = 500.0
-        self.nodes[node_id]['flame'] = True
-        self.nodes[node_id]['status'] = 2  # NODEFIRE
-        self.fire_nodes.add(node_id)
-        print(f"Fire started at node {node_id}")
-    
-    def calculate_spread_probability(self, node_id):
-        """Tính xác suất cháy lan sang node"""
-        if node_id in self.fire_nodes:
-            return 0.0
-        
-        neighbors = ADJACENCY.get(node_id, [])
-        
-        # Tính neighbor fire influence
-        neighbor_fire_count = sum(1 for n in neighbors if n in self.fire_nodes)
-        
-        # Lấy current values
-        node = self.nodes[node_id]
-        
-        # Spread probability = α * temp + β * smoke + γ * neighbor_fire
-        prob = (ALPHA * node['temperature'] + 
-                BETA * node['smoke'] / 100 + 
-                GAMMA * neighbor_fire_count)
-        
-        return prob
-    
-    def update_node(self, node_id):
-        """Cập nhật trạng thái node theo fire propagation"""
-        node = self.nodes[node_id]
-        
-        # Nếu đã cháy, tăng dần temperature và smoke
-        if node_id in self.fire_nodes:
-            node['temperature'] = min(node['temperature'] + random.uniform(0.5, 2.0), 150.0)
-            node['smoke'] = min(node['smoke'] + random.uniform(10, 30), 1000.0)
-            node['flame'] = True
-            node['status'] = 2  # NODEFIRE
-            return
-        
-        # Nếu chưa cháy, kiểm tra xem có bị lan từ neighbor không
-        neighbors = ADJACENCY.get(node_id, [])
-        neighbor_fire = any(n in self.fire_nodes for n in neighbors)
-        
-        if neighbor_fire:
-            # Gradient: neighbor càng gần, nhiệt độ càng cao
-            # Tăng temp và smoke từ neighbor
-            node['temperature'] += random.uniform(1.0, 3.0)
-            node['smoke'] += random.uniform(5.0, 20.0)
-            node['humidity'] = max(node['humidity'] - random.uniform(0.5, 2.0), 10.0)
-            
-            # Kiểm tra điều kiện bắt cháy
-            if (node['temperature'] > TEMP_IGNITE or 
-                node['smoke'] > SMOKE_IGNITE):
-                self.start_fire(node_id)
-                print(f"Fire spread to node {node_id}! Temp: {node['temperature']:.1f}°C, Smoke: {node['smoke']:.1f}ppm")
-        
-        # Random fluctuation cho nodes không bị ảnh hưởng
-        else:
-            node['temperature'] += random.uniform(-0.5, 0.5)
-            node['temperature'] = max(20.0, min(node['temperature'], 40.0))
-    
-    def get_payload(self, node_id) -> dict:
-        """Lấy payload cho một node"""
-        node = self.nodes[node_id]
-        
-        return {
-            "timestamp": int(time.time() * 1000),
-            "temperature": round(node['temperature'], 2),
-            "humidity": round(node['humidity'], 2),
-            "smoke": round(node['smoke'], 2),
-            "flame": bool(node['flame']),
-            "node_id": node_id,
-            "battery": node['battery'],
-            "status": node['status']
-        }
-
-def simulate_data():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    
-    try:
-        # Kết nối tới Broker
-        client.connect(BROKER, PORT, 60)
-        print(f"Fire Simulator started. Sending data to {BROKER}...")
-        print(f"Fire propagation: α={ALPHA}, β={BETA}, γ={GAMMA}")
-        print(f"gnite thresholds: Temp>{TEMP_IGNITE}°C, Smoke>{SMOKE_IGNITE}ppm")
-        
-        simulator = FireSimulator()
-        
-        iteration = 0
-        while True:
-            iteration += 1
-            print(f"\n--- Iteration {iteration} ---")
-            print(f"Fire nodes: {sorted(simulator.fire_nodes)}")
-            
-            # Cập nhật tất cả nodes
-            for node_id in range(1, 21):
-                simulator.update_node(node_id)
-            
-            # Gửi dữ liệu cho tất cả nodes
-            for node_id in range(1, 21):
-                payload = simulator.get_payload(node_id)
-                topic = f"{TOPIC_PREFIX}/{node_id}/data"
+            if node_id == 12:
+                continue # Giả lập node 12 bị chết/mất kết nối!
                 
-                json_payload = json.dumps(payload)
-                client.publish(topic, json_payload)
-                
-                if node_id in simulator.fire_nodes:
-                    print(f"Node {node_id}: T={payload['temperature']:.1f}°C, S={payload['smoke']:.1f}ppm")
+            payload = generate_payload(node_id)
+            client.publish(TOPIC, json.dumps(payload))
+            print(f"Bắn dữ liệu Node {node_id} -> {payload['temperature']:.1f}°C")
             
-            # Check if all nodes are on fire
-            if len(simulator.fire_nodes) >= 15:
-                print(f"\nBuilding almost fully on fire! ({len(simulator.fire_nodes)}/20 nodes)")
+            # Làm chậm lại 0.3s giữa các node
+            time.sleep(0.3) 
             
-            # Nghỉ 2 giây trước khi update tiếp
-            time.sleep(2.0)
-            
-    except KeyboardInterrupt:
-        print("\nStopping Fire Simulator.")
-        client.disconnect()
-    except Exception as e:
-        print(f"Error: {e}")
+        print("⏳ Đã quét xong 1 vòng. Chờ chu kỳ tiếp theo...")
+        time.sleep(2.0) # Nghỉ 2 giây trước vòng lặp mới
 
-if __name__ == "__main__":
-    simulate_data()
+except KeyboardInterrupt:
+    print("\n🛑 Đã dừng script giả lập.")
+    client.disconnect()

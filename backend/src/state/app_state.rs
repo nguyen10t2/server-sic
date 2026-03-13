@@ -27,10 +27,13 @@ pub struct AppState {
 
     /// Kênh broadcast để đẩy dữ liệu tới các kết nối WebSocket realtime
     pub tx: tokio::sync::broadcast::Sender<Arc<Payload>>,
+
+    /// Client MQTT để gửi lệnh (command) xuống dưới các node
+    pub mqtt_client: Option<rumqttc::AsyncClient>,
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(mqtt_client: Option<rumqttc::AsyncClient>) -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
         let mut graph = Graph { nodes: vec![], edges: vec![] };
@@ -47,6 +50,7 @@ impl AppState {
             adjacency_list,
             cached_path: DashMap::new(),
             tx,
+            mqtt_client,
         }
     }
 
@@ -66,7 +70,36 @@ impl AppState {
             self.update_evacuation_paths();
         }
 
+        self.send_command_to_node(payload.node_id);
+
         Some(fire_result)
+    }
+
+    /// Khởi chạy lệnh MQTT (Buzzer + LED) cho một Node
+    fn send_command_to_node(&self, node_id: u16) {
+        if let Some(client) = self.mqtt_client.clone() {
+            let fire_status = self.fire_model.detect(node_id);
+            let buzzer = fire_status.is_fire || fire_status.risk_level == crate::common::fire_detection::RiskLevel::Critical;
+            
+            let mut dir = "OFF".to_string();
+            // Lấy bước đi tiếp theo nếu bản thân node không cháy
+            if !fire_status.is_fire {
+                if let Some(path_result) = self.get_evacuation_path(node_id) {
+                    if path_result.path.len() > 1 {
+                        dir = path_finding::get_direction(node_id as u8, path_result.path[1]);
+                    }
+                }
+            }
+
+            let topic = format!("esp32/cmd/{}", node_id);
+            let cmd = crate::database::schema::CommandPayload { buzzer, dir };
+            
+            tokio::spawn(async move {
+                if let Ok(json_str) = serde_json::to_string(&cmd) {
+                    let _ = client.publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str).await;
+                }
+            });
+        }
     }
 
     /// Cập nhật lộ trình sơ tán cho tất cả các node
@@ -126,6 +159,6 @@ impl AppState {
 
 impl Default for AppState {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
     }
 }

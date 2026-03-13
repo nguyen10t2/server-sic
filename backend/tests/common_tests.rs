@@ -174,3 +174,60 @@ mod path_tests {
         assert_eq!(result.exit_node, 5);
     }
 }
+
+mod new_logics_tests {
+    use esp32::common::path_finding::get_direction;
+    use esp32::common::weight;
+    use esp32::database::schema::{NodeStatus, Payload};
+
+    #[test]
+    fn test_get_direction() {
+        assert_eq!(get_direction(1, 2), "E");   // +1
+        assert_eq!(get_direction(2, 1), "W");   // -1
+        assert_eq!(get_direction(1, 6), "S");   // +5
+        assert_eq!(get_direction(6, 1), "N");   // -5
+        assert_eq!(get_direction(1, 10), "OFF");// invalid distance
+    }
+
+    #[test]
+    fn test_weight_with_dead_node() {
+        let payload1 = Payload {
+            node_id: 1,
+            status: NodeStatus::NODEALIVE as u8,
+            temperature: 25.0,
+            humidity: 50.0,
+            smoke: 0.0,
+            flame: false,
+            timestamp: 0,
+            battery: 100,
+        };
+
+        let mut payload2 = payload1.clone();
+        payload2.node_id = 2;
+        payload2.status = NodeStatus::NODEDEAD as u8; // Node dead
+
+        let w = weight(&payload1, &payload2, 4.0);
+        assert!(w.is_infinite(), "Weight to dead node must be infinity");
+    }
+
+    #[test]
+    fn test_weight_with_fire_node() {
+        let payload1 = Payload {
+            node_id: 1,
+            status: NodeStatus::NODEALIVE as u8,
+            temperature: 25.0,
+            humidity: 50.0,
+            smoke: 0.0,
+            flame: false,
+            timestamp: 0,
+            battery: 100,
+        };
+
+        let mut payload2 = payload1.clone();
+        payload2.node_id = 2;
+        payload2.status = NodeStatus::NODEFIRE as u8; // Node on fire
+
+        let w = weight(&payload1, &payload2, 4.0);
+        assert!(w.is_infinite(), "Weight to fire node must be infinity");
+    }
+}

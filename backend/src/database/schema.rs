@@ -48,6 +48,13 @@ impl Payload {
     }
 }
 
+/// Struct đại diện cho lệnh gửi xuống các node (Buzzer + LED)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandPayload {
+    pub buzzer: bool,
+    pub dir: String,
+}
+
 impl Default for Payload {
     fn default() -> Self {
         use crate::constants::defaults;
