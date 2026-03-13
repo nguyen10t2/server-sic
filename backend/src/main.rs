@@ -1,4 +1,6 @@
+use actix_web::middleware::Logger;
 use actix_web::{App, HttpServer, web};
+use log::info;
 use std::sync::Arc;
 
 use esp32::configs::env::ENV;
@@ -9,6 +11,9 @@ use esp32::state::app_state::AppState;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenvy::dotenv().ok(); // Load .env file
+
+    // Logger
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let ip = ENV.ip.clone();
     let port = ENV.port;
@@ -45,8 +50,8 @@ async fn main() -> std::io::Result<()> {
                 let payload = Arc::make_mut(entry.value_mut());
                 if current_time - payload.timestamp > timeout_threshold {
                     if payload.status != 3 {
-                        println!(
-                            "⚠️ CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.",
+                        info!(
+                            "CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.",
                             payload.node_id
                         );
                         payload.status = 3; // NODEDEAD
@@ -68,10 +73,11 @@ async fn main() -> std::io::Result<()> {
     // Chạy Web Server
     let app_data = web::Data::from(shared_state);
 
-    println!("Server running at http://{}:{}/api/status", ip, port);
+    info!("Server running at http://{}:{}/api/status", ip, port);
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .app_data(app_data.clone())
             .service(esp32::controllers::api::ws_index)
             .service(esp32::controllers::api::get_status)
