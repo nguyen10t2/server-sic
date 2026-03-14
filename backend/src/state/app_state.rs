@@ -6,7 +6,7 @@ use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
 use crate::common::graph::Graph;
 use crate::common::path_finding::{self, PathResult};
 use crate::constants::building::TOTAL_NODES;
-use crate::database::schema::{Payload, WsMessage};
+use crate::database::schema::{Direction, Payload, WsMessage, WsMessageType};
 
 /// Struct lưu trữ state chung của ứng dụng
 pub struct AppState {
@@ -35,7 +35,10 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(mqtt_client: Option<rumqttc::AsyncClient>, db_tx: tokio::sync::mpsc::Sender<Payload>) -> Self {
+    pub fn new(
+        mqtt_client: Option<rumqttc::AsyncClient>,
+        db_tx: tokio::sync::mpsc::Sender<Payload>,
+    ) -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
         let mut graph = Graph { nodes: vec![], edges: vec![] };
@@ -75,20 +78,24 @@ impl AppState {
             self.update_evacuation_paths();
 
             // Extract the paths here to be broadcasted with WS
-            let paths: Vec<_> = self.cached_path.iter().map(|entry| {
-                serde_json::json!({
-                    "node_id": *entry.key(),
-                    "path": entry.value().path.clone(),
-                    "total_weight": entry.value().total_weight,
-                    "exit_node": entry.value().exit_node,
+            let paths: Vec<_> = self
+                .cached_path
+                .iter()
+                .map(|entry| {
+                    serde_json::json!({
+                        "node_id": *entry.key(),
+                        "path": entry.value().path.clone(),
+                        "total_weight": entry.value().total_weight,
+                        "exit_node": entry.value().exit_node,
+                    })
                 })
-            }).collect();
+                .collect();
             current_paths_payload = Some(paths);
         }
 
         // --- Bắn dữ liệu ra WebSocket ---
         let ws_msg = WsMessage {
-            r#type: "SensorAndPathUpdate".to_string(),
+            r#type: WsMessageType::SensorAndPathUpdate,
             payload: payload.clone(),
             evacuation_paths: current_paths_payload,
         };
@@ -106,7 +113,7 @@ impl AppState {
             let buzzer = fire_status.is_fire
                 || fire_status.risk_level == crate::common::fire_detection::RiskLevel::Critical;
 
-            let mut dir = "OFF".to_string();
+            let mut dir = Direction::OFF;
             // Lấy bước đi tiếp theo nếu bản thân node không cháy
             if !fire_status.is_fire {
                 if let Some(path_result) = self.get_evacuation_path(node_id) {

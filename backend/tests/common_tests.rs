@@ -178,15 +178,15 @@ mod path_tests {
 mod new_logics_tests {
     use esp32::common::path_finding::get_direction;
     use esp32::common::weight;
-    use esp32::database::schema::{NodeStatus, Payload};
+    use esp32::database::schema::{Direction, NodeStatus, Payload};
 
     #[test]
     fn test_get_direction() {
-        assert_eq!(get_direction(1, 2), "E"); // +1
-        assert_eq!(get_direction(2, 1), "W"); // -1
-        assert_eq!(get_direction(1, 6), "S"); // +5
-        assert_eq!(get_direction(6, 1), "N"); // -5
-        assert_eq!(get_direction(1, 10), "OFF"); // invalid distance
+        assert_eq!(get_direction(1, 2), Direction::E); // +1
+        assert_eq!(get_direction(2, 1), Direction::W); // -1
+        assert_eq!(get_direction(1, 6), Direction::S); // +5
+        assert_eq!(get_direction(6, 1), Direction::N); // -5
+        assert_eq!(get_direction(1, 10), Direction::OFF); // invalid distance
     }
 
     #[test]

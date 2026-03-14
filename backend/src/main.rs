@@ -10,9 +10,7 @@ use esp32::state::app_state::AppState;
 
 #[get("/")]
 async fn index() -> HttpResponse {
-    HttpResponse::Found()
-        .insert_header(("Location", "/api/status"))
-        .finish()
+    HttpResponse::Found().insert_header(("Location", "/api/status")).finish()
 }
 
 #[actix_web::main]
@@ -39,7 +37,7 @@ async fn main() -> std::io::Result<()> {
 
     // Bắt đầu MPSC để xử lý tác vụ ghi DB dạng queue
     let (db_tx, mut db_rx) = tokio::sync::mpsc::channel::<esp32::database::schema::Payload>(1000);
-    
+
     // --- DB WORKER: Xử lý Ghi DB Batch/Queue ---
     let db_repo_clone = payload_repo.clone();
     tokio::spawn(async move {
@@ -93,7 +91,8 @@ async fn main() -> std::io::Result<()> {
             for mut entry in watchdog_state.latest_data.iter_mut() {
                 let payload = Arc::make_mut(entry.value_mut());
                 if current_time - payload.timestamp > timeout_threshold {
-                    if payload.status != 3 { // status == 3 indicates NODEDEAD
+                    if payload.status != 3 {
+                        // status == 3 indicates NODEDEAD
                         info!(
                             "CẢNH BÁO: Node {} mất kết nối! Đang đánh dấu DEAD.",
                             payload.node_id

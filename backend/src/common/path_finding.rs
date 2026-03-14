@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::common::graph::Graph;
 use crate::common::weight;
 use crate::constants::{DEFAULT_EXITS, building::DEFAULT_EDGE_WEIGHT};
-use crate::database::schema::Payload;
+use crate::database::schema::{Direction, Payload};
 
 /// Dijkstra result: path từ start đến nearest exit
 #[derive(Debug, Clone)]
@@ -194,19 +194,19 @@ pub fn find_evacuation_path(
 }
 
 /// Tính toán hướng đi (N, S, E, W) cho con LED matrix theo grid 4x5
-pub fn get_direction(from: u8, to: u8) -> String {
+pub fn get_direction(from: u8, to: u8) -> Direction {
     let from_i16 = from as i16;
     let to_i16 = to as i16;
 
     if to_i16 == from_i16 + 1 {
-        "E".to_string()
+        Direction::E
     } else if to_i16 == from_i16 - 1 {
-        "W".to_string()
+        Direction::W
     } else if to_i16 == from_i16 + 5 {
-        "S".to_string() // Số to xuống dưới (Nam)
+        Direction::S // Số to xuống dưới (Nam)
     } else if to_i16 == from_i16 - 5 {
-        "N".to_string() // Số bé lên trên (Bắc)
+        Direction::N // Số bé lên trên (Bắc)
     } else {
-        "OFF".to_string()
+        Direction::OFF
     }
 }
