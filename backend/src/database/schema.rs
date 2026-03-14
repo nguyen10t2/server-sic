@@ -48,17 +48,35 @@ impl Payload {
     }
 }
 
+/// Enum đại diện cho hướng đi
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
+pub enum Direction {
+    OFF = 0,
+    N = 1,
+    S = 2,
+    E = 3,
+    W = 4,
+}
+
+/// Enum đại diện cho loại gói tin WebSocket
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum WsMessageType {
+    SensorAndPathUpdate = 0,
+}
+
 /// Struct đại diện cho lệnh gửi xuống các node (Buzzer + LED)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandPayload {
     pub buzzer: bool,
-    pub dir: String,
+    pub dir: Direction,
 }
 
 /// Dữ liệu WebSocket gửi lên Frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WsMessage {
-    pub r#type: String,
+    pub r#type: WsMessageType,
     pub payload: Payload,
     pub evacuation_paths: Option<Vec<serde_json::Value>>,
 }
