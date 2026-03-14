@@ -110,8 +110,6 @@ impl AppState {
     fn send_command_to_node(&self, node_id: u16) {
         if let Some(client) = self.mqtt_client.clone() {
             let fire_status = self.fire_model.detect(node_id);
-            let buzzer = fire_status.is_fire
-                || fire_status.risk_level == crate::common::fire_detection::RiskLevel::Critical;
 
             let mut dir = Direction::OFF;
             // Lấy bước đi tiếp theo nếu bản thân node không cháy
@@ -124,12 +122,13 @@ impl AppState {
             }
 
             let topic = format!("esp32/cmd/{}", node_id);
-            let cmd = crate::database::schema::CommandPayload { buzzer, dir };
+            let cmd = crate::database::schema::CommandPayload { dir };
 
             tokio::spawn(async move {
                 if let Ok(json_str) = serde_json::to_string(&cmd) {
                     let _ =
-                        client.publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str).await;
+                        client.publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str.clone()).await;
+                    log::info!("Sent command to topic {}: {}", topic, json_str);
                 }
             });
         }

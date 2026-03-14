@@ -68,7 +68,6 @@ pub enum WsMessageType {
 /// Struct đại diện cho lệnh gửi xuống các node (Buzzer + LED)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandPayload {
-    pub buzzer: bool,
     pub dir: Direction,
 }
 

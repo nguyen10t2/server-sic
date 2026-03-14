@@ -11,9 +11,9 @@ pub mod fire_detection {
     pub const TEMP_MAX_RANGE: f32 = 20.0;
 
     /// Smoke threshold (ppm) - trên ngưỡng này được coi là nguy hiểm  
-    pub const SMOKE_THRESHOLD: f32 = 300.0;
-    pub const SMOKE_WARNING_THRESHOLD: f32 = 100.0;
-    pub const SMOKE_MAX_RANGE: f32 = 200.0;
+    pub const SMOKE_THRESHOLD: f32 = 750.0;
+    pub const SMOKE_WARNING_THRESHOLD: f32 = 700.0;
+    pub const SMOKE_MAX_RANGE: f32 = 50.0;
 
     pub const TREND_TEMP_THRESHOLD: f32 = 20.0;
     pub const TREND_SMOKE_THRESHOLD: f32 = 200.0;
