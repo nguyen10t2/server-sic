@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{App, HttpResponse, HttpServer, get, web};
 use log::info;
@@ -123,6 +124,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(Cors::default())
             .wrap(Logger::default())
             .app_data(app_data.clone())
             .service(index)
