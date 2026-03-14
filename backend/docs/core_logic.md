@@ -8,7 +8,7 @@ Tài liệu này tập trung giải thích các ý tưởng nền tảng, thuậ
 
 Hệ thống không chỉ dựa vào 1 cảm biến đơn lẻ để báo cháy mà tiến hành tổng hợp theo "chỉ số rủi ro" (Danh giá đa biến) và theo dõi xu hướng (Time-series/Trend).
 
-*   **Đầu vào (Cảm biến):** Nhiệt độ (Temperature), Độ ẩm (Humidity), Nồng độ khói/khí gas (Smoke) và Cảm biến lửa trực tiếp (Flame).
+*   **Đầu vào (Cảm biến):** Nhiệt độ (Temperature), Nồng độ khói/khí gas (Smoke) và Cảm biến lửa trực tiếp (Flame).
 *   **Trọng số Nguy hiểm (Danger Scoring):**
     *   Mỗi chỉ số được chuẩn hoá theo điểm số. Ví dụ: Nhiệt độ chia cho ngưỡng `TEMP_MAX_SCORE`, Cảm biến khói chia cho ngưỡng `SMOKE_MAX_SCORE`.
     *   Nếu phát hiện `Flame == true`, hệ thống lập tức cộng dồn một điểm phạt (Penalty) khổng lồ, đưa thẳng vào trạng thái Báo động.

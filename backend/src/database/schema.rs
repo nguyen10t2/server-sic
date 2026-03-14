@@ -20,7 +20,6 @@ pub struct Payload {
     pub timestamp: i64,
 
     pub temperature: f32,
-    pub humidity: f32,
     pub smoke: f32,
 
     pub node_id: u16,
@@ -87,7 +86,6 @@ impl Default for Payload {
         Self {
             timestamp: 0,
             temperature: defaults::TEMPERATURE,
-            humidity: defaults::HUMIDITY,
             smoke: defaults::SMOKE,
             flame: defaults::FLAME,
             node_id: 0,

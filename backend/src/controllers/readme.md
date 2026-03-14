@@ -22,7 +22,6 @@ Kênh này thay thế cho việc gọi API HTTP liên tục (polling). Nó sẽ 
   "payload": {
     "timestamp": 1773421163390,
     "temperature": 25.15,
-    "humidity": 55.0,
     "smoke": 0.0,
     "flame": false,
     "node_id": 20,
@@ -90,9 +89,8 @@ Dưới đây là các Endpoints gọi một lần (One-time fetch), chủ yếu
   {
     "timestamp": 1773373760916,
     "temperature": 25.15,
-    "humidity": 55.0,
     "smoke": 0.0,
-    "flame": 0.0,
+    "flame": false,
     "node_id": 20,
     "battery": 92,
     "status": 0

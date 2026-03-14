@@ -113,7 +113,6 @@ def run_simulation():
                 timestamp = int(current_time * 1000)
 
                 temp = random.uniform(24, 26)
-                hum = random.uniform(50, 60)
                 smoke = random.uniform(10, 50)
 
                 flame = False
@@ -126,7 +125,6 @@ def run_simulation():
                     if elapsed >= t_fire:
 
                         temp = random.uniform(80, 100)
-                        hum = random.uniform(20, 30)
                         smoke = random.uniform(300, 600)
 
                         flame = True
@@ -137,7 +135,6 @@ def run_simulation():
                         progress = (elapsed - (t_fire - 30)) / 30
 
                         temp = 26 + progress * 54
-                        hum = 50 - progress * 20
                         smoke = 50 + progress * 250
 
                         status = 1
@@ -154,7 +151,6 @@ def run_simulation():
                     "timestamp": timestamp,
                     "node_id": node_id,
                     "temperature": temp,
-                    "humidity": hum,
                     "smoke": smoke,
                     "flame": flame,
                     "battery": random.randint(80, 100),

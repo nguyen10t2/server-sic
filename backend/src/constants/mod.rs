@@ -15,10 +15,6 @@ pub mod fire_detection {
     pub const SMOKE_WARNING_THRESHOLD: f32 = 100.0;
     pub const SMOKE_MAX_RANGE: f32 = 200.0;
 
-    pub const HUMIDITY_WARNING_THRESHOLD: f32 = 60.0;
-    pub const HUMIDITY_CRITICAL_THRESHOLD: f32 = 30.0;
-    pub const HUMIDITY_MAX_RANGE: f32 = 30.0;
-
     pub const TREND_TEMP_THRESHOLD: f32 = 20.0;
     pub const TREND_SMOKE_THRESHOLD: f32 = 200.0;
 
@@ -35,18 +31,16 @@ pub mod fire_detection {
 /// Weight calculation
 pub mod weight {
     /// Trọng số cho các yếu tố trong tính fire probability
-    pub const WEIGHT_SMOKE: f32 = 0.40;
-    pub const WEIGHT_TEMPERATURE: f32 = 0.25;
+    pub const WEIGHT_SMOKE: f32 = 0.45;
+    pub const WEIGHT_TEMPERATURE: f32 = 0.30;
     pub const WEIGHT_TREND: f32 = 0.15;
     pub const WEIGHT_ANOMALY: f32 = 0.10;
-    pub const WEIGHT_HUMIDITY: f32 = 0.10;
 }
 
 /// Danger calculation parameters
 pub mod danger {
     pub const TEMP_MAX_SCORE: f32 = 100.0;
     pub const SMOKE_MAX_SCORE: f32 = 500.0;
-    pub const HUMIDITY_MAX_SCORE: f32 = 100.0;
 
     pub const TEMP_WEIGHT: f32 = 2.0;
     pub const SMOKE_WEIGHT: f32 = 3.0;
@@ -73,7 +67,6 @@ pub mod mqtt {
 /// Default sensor values (khi không có data)
 pub mod defaults {
     pub const TEMPERATURE: f32 = 25.0; // Nhiệt độ phòng
-    pub const HUMIDITY: f32 = 50.0; // Độ ẩm bình thường  
     pub const SMOKE: f32 = 0.0; // Không có khói
     pub const FLAME: bool = false; // Không có lửa
     pub const BATTERY: u8 = 100; // Pin đầy

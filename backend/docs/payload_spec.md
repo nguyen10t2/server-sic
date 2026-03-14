@@ -14,7 +14,6 @@ Gói dữ liệu thu thập từ các phòng được gửi đến Backend thôn
   "timestamp": 1715423894000, // Unix timestamp từ node (nếu có) hoặc để Backend tự gán
   "node_id": 1,               // ID định danh của node theo sơ đồ toà nhà (u16)
   "temperature": 35.5,        // Cảm biến nhiệt độ (độ C - f32)
-  "humidity": 68.2,           // Cảm biến độ ẩm (% - f32)
   "smoke": 420.0,             // Mức phát hiện khói, khí CO/Methan (Analog value/ppm - f32)
   "flame": false,             // Trạng thái phát hiện lửa trực tiếp (true: CÓ LỬA, false: Không)
   "battery": 95,              // Phần trăm pin còn lại (u8)
@@ -55,7 +54,6 @@ Bản tin trung tâm chuyển tiếp qua WebSocket để hiển thị real-time 
     "timestamp": 1715423894000,
     "node_id": 1,
     "temperature": 38.0,
-    "humidity": 65.0,
     "smoke": 300.0,
     "flame": false,
     "battery": 95,

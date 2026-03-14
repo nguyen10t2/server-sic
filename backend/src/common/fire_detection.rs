@@ -29,7 +29,6 @@ pub enum RiskLevel {
 pub struct FireDetails {
     pub temperature_score: f32,
     pub smoke_score: f32,
-    pub humidity_score: f32,
     pub flame_factor: f32,
     pub trend_factor: f32,
     pub anomaly_score: f32,
@@ -88,13 +87,6 @@ impl NodeHistory {
         self.readings.iter().map(|p| p.smoke).sum::<f32>() / self.readings.len() as f32
     }
 
-    #[allow(dead_code)]
-    pub fn avg_humidity(&self) -> f32 {
-        if self.readings.is_empty() {
-            return defaults::HUMIDITY;
-        }
-        self.readings.iter().map(|p| p.humidity).sum::<f32>() / self.readings.len() as f32
-    }
 
     /// Tính trend (sự thay đổi từ baseline đến latest)
     pub fn temperature_trend(&self) -> f32 {
@@ -169,7 +161,6 @@ impl FireDetectionModel {
                 details: FireDetails {
                     temperature_score: 0.0,
                     smoke_score: 0.0,
-                    humidity_score: 0.0,
                     flame_factor: 0.0,
                     trend_factor: 0.0,
                     anomaly_score: 0.0,
@@ -181,7 +172,7 @@ impl FireDetectionModel {
         let latest = history.latest().unwrap();
 
         // 1. Rule-based scores
-        let (temperature_score, smoke_score, humidity_score, flame_factor) =
+        let (temperature_score, smoke_score, flame_factor) =
             self.calculate_sensor_scores(latest);
 
         // 2. Anomaly detection (so với baseline)
@@ -191,11 +182,9 @@ impl FireDetectionModel {
         // 3. Trend analysis
         let trend_factor = self.calculate_trend(&history);
 
-        // 4. Tính tổng fire probability
         let fire_probability = self.calculate_fire_probability(
             temperature_score,
             smoke_score,
-            humidity_score,
             flame_factor,
             anomaly_score,
             trend_factor,
@@ -215,7 +204,6 @@ impl FireDetectionModel {
             details: FireDetails {
                 temperature_score,
                 smoke_score,
-                humidity_score,
                 flame_factor,
                 trend_factor,
                 anomaly_score,
@@ -224,7 +212,7 @@ impl FireDetectionModel {
     }
 
     /// Tính scores từ sensor readings
-    fn calculate_sensor_scores(&self, payload: &Payload) -> (f32, f32, f32, f32) {
+    fn calculate_sensor_scores(&self, payload: &Payload) -> (f32, f32, f32) {
         // Temperature score (0-1)
         let temperature_score = if payload.temperature >= self.temperature_threshold {
             1.0
@@ -243,19 +231,10 @@ impl FireDetectionModel {
             0.0
         };
 
-        // Humidity score - low humidity = higher fire risk (0-1)
-        let humidity_score = if payload.humidity <= HUMIDITY_CRITICAL_THRESHOLD {
-            1.0
-        } else if payload.humidity <= HUMIDITY_WARNING_THRESHOLD {
-            (HUMIDITY_WARNING_THRESHOLD - payload.humidity) / HUMIDITY_MAX_RANGE
-        } else {
-            0.0
-        };
-
         // Flame factor (instant danger) - use has_flame() method
         let flame_factor = if payload.has_flame() { 1.0 } else { 0.0 };
 
-        (temperature_score, smoke_score, humidity_score, flame_factor)
+        (temperature_score, smoke_score, flame_factor)
     }
 
     /// Tính anomaly score so với baseline
@@ -306,7 +285,6 @@ impl FireDetectionModel {
         &self,
         temperature_score: f32,
         smoke_score: f32,
-        humidity_score: f32,
         flame_factor: f32,
         anomaly_score: f32,
         trend_factor: f32,
@@ -317,18 +295,16 @@ impl FireDetectionModel {
             return 1.0;
         }
 
-        // Weight: smoke (40%), temperature (25%), trend (15%), anomaly (10%), humidity (10%)
+        // Weight: smoke (45%), temperature (30%), trend (15%), anomaly (10%)
         let weight_smoke = WEIGHT_SMOKE;
         let weight_temp = WEIGHT_TEMPERATURE;
         let weight_trend = WEIGHT_TREND;
         let weight_anomaly = WEIGHT_ANOMALY;
-        let weight_humidity = WEIGHT_HUMIDITY;
 
         let probability = smoke_score * weight_smoke
             + temperature_score * weight_temp
             + trend_factor * weight_trend
-            + anomaly_score * weight_anomaly
-            + humidity_score * weight_humidity;
+            + anomaly_score * weight_anomaly;
 
         probability.min(1.0).max(0.0)
     }
