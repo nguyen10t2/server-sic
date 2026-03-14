@@ -5,7 +5,7 @@ import random
 import os
 import heapq
 
-BROKER = "localhost"
+BROKER = "f5.soict.io"
 PORT = 1883
 BASE_TOPIC = "fire/"
 
@@ -106,6 +106,8 @@ def run_simulation():
             elapsed = current_time - start_time
 
             for node_id in nodes:
+                if node_id == 1:
+                    continue
 
                 if choice == "2" and node_id == 12:
                     continue
