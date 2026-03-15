@@ -124,7 +124,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .wrap(Cors::default())
+            .wrap(Cors::permissive())
             .wrap(Logger::default())
             .app_data(app_data.clone())
             .service(index)

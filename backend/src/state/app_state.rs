@@ -126,8 +126,9 @@ impl AppState {
 
             tokio::spawn(async move {
                 if let Ok(json_str) = serde_json::to_string(&cmd) {
-                    let _ =
-                        client.publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str.clone()).await;
+                    let _ = client
+                        .publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str.clone())
+                        .await;
                     log::info!("Sent command to topic {}: {}", topic, json_str);
                 }
             });

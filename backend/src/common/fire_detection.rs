@@ -87,7 +87,6 @@ impl NodeHistory {
         self.readings.iter().map(|p| p.smoke).sum::<f32>() / self.readings.len() as f32
     }
 
-
     /// Tính trend (sự thay đổi từ baseline đến latest)
     pub fn temperature_trend(&self) -> f32 {
         if let (Some(baseline), Some(latest)) = (self.baseline(), self.latest()) {
@@ -172,8 +171,7 @@ impl FireDetectionModel {
         let latest = history.latest().unwrap();
 
         // 1. Rule-based scores
-        let (temperature_score, smoke_score, flame_factor) =
-            self.calculate_sensor_scores(latest);
+        let (temperature_score, smoke_score, flame_factor) = self.calculate_sensor_scores(latest);
 
         // 2. Anomaly detection (so với baseline)
         let (anomaly_score, _temp_anomaly, _smoke_anomaly) =
