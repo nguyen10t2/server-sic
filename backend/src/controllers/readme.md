@@ -165,7 +165,7 @@ Dưới đây là các Endpoints gọi một lần (One-time fetch), chủ yếu
 
 ### 5. Khung Xương Bản Đồ (Nodes, Edges, Exits)
 * **Tuyến Đường:** `GET /api/building/graph`
-* **Mục đích:** Cung cấp thông số "hình học" để Frontend vẽ các hình tròn (Node), nét nối (Edge Cạnh) và cửa ra (Exit) lên file UI Vector. Đây là xương sống cấu trúc tĩnh.
+* **Mục đích:** Cung cấp thông số "hình học" để Frontend vẽ các hình tròn (Node), nét nối (Edge Cạnh) và cửa ra (Exit) lên file UI Vector. Đây là xương sống cấu trúc động của toà nhà được load từ tệp `building_graph.json` ở cấp gốc backend.
 
 **Phản hồi:**
 ```json
@@ -175,6 +175,6 @@ Dưới đây là các Endpoints gọi một lần (One-time fetch), chủ yếu
     [1, 2, 4.0],
     [2, 3, 4.0]
   ],
-  "exits": [5, 10, 15, 20]
+  "exits": [5]
 }
 ```
