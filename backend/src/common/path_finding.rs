@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::common::graph::Graph;
 use crate::common::weight;
-use crate::constants::{DEFAULT_EXITS, building::DEFAULT_EDGE_WEIGHT};
+use crate::constants::building::DEFAULT_EDGE_WEIGHT;
 use crate::database::schema::{Direction, Payload};
 
 /// Dijkstra result: path từ start đến nearest exit
@@ -177,11 +177,6 @@ pub fn reconstruct_path(previous: &HashMap<u8, u8>, start: u8, end: u8) -> Vec<u
     path
 }
 
-/// Default exits cho building (các node ở rìa tòa nhà)
-pub fn default_exits() -> Vec<u8> {
-    DEFAULT_EXITS.to_vec()
-}
-
 /// Tìm đường evacuation với default exits
 #[allow(dead_code)]
 pub fn find_evacuation_path(
@@ -190,7 +185,7 @@ pub fn find_evacuation_path(
     start: u8,
     latest_data: &DashMap<u16, Arc<Payload>>,
 ) -> Option<PathResult> {
-    dijkstra(graph, adj, start, &default_exits(), latest_data)
+    dijkstra(graph, adj, start, &graph.exits, latest_data)
 }
 
 /// Tính toán hướng đi (N, S, E, W) cho con LED matrix theo grid 4x5

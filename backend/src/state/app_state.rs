@@ -41,7 +41,7 @@ impl AppState {
     ) -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
-        let mut graph = Graph { nodes: vec![], edges: vec![] };
+        let mut graph = Graph { nodes: vec![], edges: vec![], exits: vec![] };
         graph.loading_json(graph_json);
 
         let adjacency_list = path_finding::build_adjacency_list(&graph);
@@ -137,7 +137,7 @@ impl AppState {
 
     /// Cập nhật lộ trình sơ tán cho tất cả các node
     fn update_evacuation_paths(&self) {
-        let exits = path_finding::default_exits();
+        let exits = &self.graph.exits;
 
         // Lấy tất cả các node đang có cháy
         let fire_nodes = self.fire_model.get_fire_nodes();
@@ -169,12 +169,12 @@ impl AppState {
         }
 
         // Nếu không có trong cache, tiến hành tính toán ngay
-        let exits = path_finding::default_exits();
+        let exits = &self.graph.exits;
         path_finding::dijkstra(
             &self.graph,
             &self.adjacency_list,
             node_id as u8,
-            &exits,
+            exits,
             &self.latest_data,
         )
     }

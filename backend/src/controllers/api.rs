@@ -175,6 +175,6 @@ pub async fn get_building_graph(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(GraphResponse {
         nodes: data.graph.nodes.clone(),
         edges,
-        exits: vec![5, 10, 15, 20],
+        exits: data.graph.exits.clone(),
     })
 }

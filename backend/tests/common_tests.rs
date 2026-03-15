@@ -90,6 +90,7 @@ mod path_tests {
     fn test_build_adjacency_list_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3],
+            exits: vec![],
             edges: vec![Edge { from: 1, to: 2, weight: 4.0 }, Edge { from: 2, to: 3, weight: 4.0 }],
         };
 
@@ -117,6 +118,7 @@ mod path_tests {
     fn test_dijkstra_simple_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3, 4, 5],
+            exits: vec![5],
             edges: vec![
                 Edge { from: 1, to: 2, weight: 4.0 },
                 Edge { from: 2, to: 3, weight: 4.0 },
@@ -141,6 +143,7 @@ mod path_tests {
     fn test_dijkstra_with_fire_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3, 4, 5],
+            exits: vec![5],
             edges: vec![
                 Edge { from: 1, to: 2, weight: 4.0 },
                 Edge { from: 2, to: 3, weight: 4.0 },

@@ -1,8 +1,5 @@
 /// Các hằng số cấu hình cho hệ thống
 
-/// Default exit nodes cho building evacuation
-pub const DEFAULT_EXITS: &[u8] = &[5, 10, 15, 20];
-
 /// Fire detection thresholds
 pub mod fire_detection {
     /// Temperature threshold (°C) - trên ngưỡng này được coi là nguy hiểm
