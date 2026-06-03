@@ -1,6 +1,5 @@
 from graph import BuildingGraph
 
-
 graph = BuildingGraph("building.json")
 
 print(
