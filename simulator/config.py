@@ -1,0 +1,4 @@
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+
+PUBLISH_INTERVAL = 2
