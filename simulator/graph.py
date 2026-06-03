@@ -55,3 +55,41 @@ class BuildingGraph:
             graph[b][a] = distance
 
         return graph
+    
+    def build_weighted_graph(self, hazard_map):
+        graph = {}
+
+        for node in self.nodes:
+
+            graph[
+                node["id"]
+            ] = {}
+
+        for edge in self.edges:
+
+            a = edge["from"]
+            b = edge["to"]
+
+            distance = edge["distance"]
+
+            danger_a = (
+                hazard_map.get_score(a)
+            )
+
+            danger_b = (
+                hazard_map.get_score(b)
+            )
+
+            danger = max(
+                danger_a,
+                danger_b
+            )
+
+            weight = (
+                distance + danger
+            )
+
+            graph[a][b] = weight
+            graph[b][a] = weight
+
+        return graph
