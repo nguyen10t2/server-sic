@@ -11,13 +11,16 @@ backend/
 ├── src/
 │   ├── lib.rs       # Điểm vào chính của thư viện, xuất các module
 │   └── main.rs      # Điểm vào của ứng dụng (chạy server)
+├── docs/            # Tất cả các tài liệu luồng nghiệp vụ nằm riêng biệt
 ├── tests/
 │   ├── api_tests.rs # Các bài kiểm thử tích hợp cho API
 │   └── common_tests.rs # Các bài kiểm thử dùng chung / tiện ích
+├── building_graph.json # Tệp tin định nghĩa sơ đồ toà nhà (Nodes, Edges, Exits)
 ├── Cargo.toml       # Quản lý dependencies và cấu hình Rust
 └── rustfmt.toml     # Lựa chọn định dạng mã nguồn bộ định dạng Rust
 ```
 
+* **`building_graph.json`**: Cấu hình bản đồ không gian của tòa nhà. File này giúp loại bỏ hoàn toàn các giá trị hardcode trong mã nguồn. Bạn có thể định nghĩa tự do các vị trí phòng (nodes), khoảng cách kết nối giữa chúng (edges) và nơi nào là cửa thoát hiểm an toàn (exits).
 * **`src/main.rs`**: Khởi tạo cấu hình và chạy HTTP server với Actix-web. Thiết lập các worker chạy ngầm bằng `tokio::spawn` để xử lý hàng đợi Database và Watchdog.
 * **`src/lib.rs`**: Khai báo và cấu hình các module chức năng chính (controllers, database, services, websocket, v.v.).
 

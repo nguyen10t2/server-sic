@@ -41,7 +41,7 @@ impl AppState {
     ) -> Self {
         // Tải đồ thị từ tệp JSON
         let graph_json = include_str!("../../building_graph.json");
-        let mut graph = Graph { nodes: vec![], edges: vec![] };
+        let mut graph = Graph { nodes: vec![], edges: vec![], exits: vec![] };
         graph.loading_json(graph_json);
 
         let adjacency_list = path_finding::build_adjacency_list(&graph);
@@ -110,8 +110,6 @@ impl AppState {
     fn send_command_to_node(&self, node_id: u16) {
         if let Some(client) = self.mqtt_client.clone() {
             let fire_status = self.fire_model.detect(node_id);
-            let buzzer = fire_status.is_fire
-                || fire_status.risk_level == crate::common::fire_detection::RiskLevel::Critical;
 
             let mut dir = Direction::OFF;
             // Lấy bước đi tiếp theo nếu bản thân node không cháy
@@ -124,12 +122,14 @@ impl AppState {
             }
 
             let topic = format!("esp32/cmd/{}", node_id);
-            let cmd = crate::database::schema::CommandPayload { buzzer, dir };
+            let cmd = crate::database::schema::CommandPayload { dir };
 
             tokio::spawn(async move {
                 if let Ok(json_str) = serde_json::to_string(&cmd) {
-                    let _ =
-                        client.publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str).await;
+                    let _ = client
+                        .publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str.clone())
+                        .await;
+                    log::info!("Sent command to topic {}: {}", topic, json_str);
                 }
             });
         }
@@ -137,7 +137,7 @@ impl AppState {
 
     /// Cập nhật lộ trình sơ tán cho tất cả các node
     fn update_evacuation_paths(&self) {
-        let exits = path_finding::default_exits();
+        let exits = &self.graph.exits;
 
         // Lấy tất cả các node đang có cháy
         let fire_nodes = self.fire_model.get_fire_nodes();
@@ -169,12 +169,12 @@ impl AppState {
         }
 
         // Nếu không có trong cache, tiến hành tính toán ngay
-        let exits = path_finding::default_exits();
+        let exits = &self.graph.exits;
         path_finding::dijkstra(
             &self.graph,
             &self.adjacency_list,
             node_id as u8,
-            &exits,
+            exits,
             &self.latest_data,
         )
     }

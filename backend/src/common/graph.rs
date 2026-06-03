@@ -7,6 +7,7 @@ pub struct Edge {
 pub struct Graph {
     pub nodes: Vec<u8>,
     pub edges: Vec<Edge>,
+    pub exits: Vec<u8>,
 }
 
 impl Graph {
@@ -16,6 +17,13 @@ impl Graph {
         let edges = parsed["edges"].as_array().unwrap();
 
         self.nodes = nodes.iter().map(|n| n.as_u64().unwrap() as u8).collect();
+        
+        if let Some(exits) = parsed.get("exits").and_then(|e| e.as_array()) {
+            self.exits = exits.iter().map(|n| n.as_u64().unwrap() as u8).collect();
+        } else {
+            self.exits = vec![];
+        }
+
         self.edges = edges
             .iter()
             .map(|e| {

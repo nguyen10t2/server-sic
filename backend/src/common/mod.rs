@@ -16,9 +16,7 @@ fn danger(payload: &Payload) -> f32 {
 
     let temp_score = payload.temperature / TEMP_MAX_SCORE;
     let smoke_score = payload.smoke / SMOKE_MAX_SCORE;
-    let hum_score = (HUMIDITY_MAX_SCORE - payload.humidity) / HUMIDITY_MAX_SCORE;
-
-    let mut danger = temp_score * TEMP_WEIGHT + smoke_score * SMOKE_WEIGHT + hum_score;
+    let mut danger = temp_score * TEMP_WEIGHT + smoke_score * SMOKE_WEIGHT;
 
     if payload.has_flame() {
         danger += FLAME_PENALTY;

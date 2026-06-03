@@ -20,7 +20,6 @@ pub struct Payload {
     pub timestamp: i64,
 
     pub temperature: f32,
-    pub humidity: f32,
     pub smoke: f32,
 
     pub node_id: u16,
@@ -69,7 +68,6 @@ pub enum WsMessageType {
 /// Struct đại diện cho lệnh gửi xuống các node (Buzzer + LED)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandPayload {
-    pub buzzer: bool,
     pub dir: Direction,
 }
 
@@ -87,7 +85,6 @@ impl Default for Payload {
         Self {
             timestamp: 0,
             temperature: defaults::TEMPERATURE,
-            humidity: defaults::HUMIDITY,
             smoke: defaults::SMOKE,
             flame: defaults::FLAME,
             node_id: 0,

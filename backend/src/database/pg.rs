@@ -17,18 +17,16 @@ impl PayloadRepository {
                 INSERT INTO payloads (
                     timestamp,
                     temperature,
-                    humidity,
                     smoke,
                     flame,
                     node_id,
                     battery,
                     status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             "#,
         )
         .bind(payload.timestamp)
         .bind(payload.temperature)
-        .bind(payload.humidity)
         .bind(payload.smoke)
         .bind(payload.flame)
         .bind(payload.node_id as i32)
@@ -45,13 +43,12 @@ impl PayloadRepository {
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO payloads (timestamp, temperature, humidity, smoke, flame, node_id, battery, status) ",
+            "INSERT INTO payloads (timestamp, temperature, smoke, flame, node_id, battery, status) ",
         );
 
         query_builder.push_values(payloads, |mut b, payload| {
             b.push_bind(payload.timestamp)
                 .push_bind(payload.temperature)
-                .push_bind(payload.humidity)
                 .push_bind(payload.smoke)
                 .push_bind(payload.flame)
                 .push_bind(payload.node_id as i32)

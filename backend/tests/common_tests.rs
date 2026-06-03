@@ -9,7 +9,6 @@ mod fire_tests {
         let payload = Payload {
             timestamp: 0,
             temperature: 25.0,
-            humidity: 50.0,
             smoke: 0.0,
             flame: false,
             node_id: 1,
@@ -32,7 +31,6 @@ mod fire_tests {
         let payload = Payload {
             timestamp: 0,
             temperature: 80.0,
-            humidity: 20.0,
             smoke: 500.0,
             flame: true,
             node_id: 1,
@@ -56,7 +54,6 @@ mod fire_tests {
         model.add_reading(&Payload {
             timestamp: 0,
             temperature: 25.0,
-            humidity: 50.0,
             smoke: 0.0,
             flame: false,
             node_id: 1,
@@ -68,7 +65,6 @@ mod fire_tests {
         model.add_reading(&Payload {
             timestamp: 1,
             temperature: 45.0,
-            humidity: 40.0,
             smoke: 50.0,
             flame: false,
             node_id: 1,
@@ -94,6 +90,7 @@ mod path_tests {
     fn test_build_adjacency_list_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3],
+            exits: vec![],
             edges: vec![Edge { from: 1, to: 2, weight: 4.0 }, Edge { from: 2, to: 3, weight: 4.0 }],
         };
 
@@ -121,6 +118,7 @@ mod path_tests {
     fn test_dijkstra_simple_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3, 4, 5],
+            exits: vec![5],
             edges: vec![
                 Edge { from: 1, to: 2, weight: 4.0 },
                 Edge { from: 2, to: 3, weight: 4.0 },
@@ -138,13 +136,14 @@ mod path_tests {
         assert!(result.is_some());
         let result = result.unwrap();
         assert_eq!(result.exit_node, 5);
-        assert_eq!(result.total_weight, 32.0); // Wait, this might fail if calc changed, let's keep it.
+        assert_eq!(result.total_weight, 24.0);
     }
 
     #[test]
     fn test_dijkstra_with_fire_2() {
         let graph = Graph {
             nodes: vec![1, 2, 3, 4, 5],
+            exits: vec![5],
             edges: vec![
                 Edge { from: 1, to: 2, weight: 4.0 },
                 Edge { from: 2, to: 3, weight: 4.0 },
@@ -159,7 +158,6 @@ mod path_tests {
 
         let mut fire_payload = Payload::default();
         fire_payload.temperature = 100.0;
-        fire_payload.humidity = 30.0;
         fire_payload.smoke = 500.0;
         fire_payload.flame = true;
         fire_payload.node_id = 2;
@@ -195,7 +193,6 @@ mod new_logics_tests {
             node_id: 1,
             status: NodeStatus::NODEALIVE as u8,
             temperature: 25.0,
-            humidity: 50.0,
             smoke: 0.0,
             flame: false,
             timestamp: 0,
@@ -216,7 +213,6 @@ mod new_logics_tests {
             node_id: 1,
             status: NodeStatus::NODEALIVE as u8,
             temperature: 25.0,
-            humidity: 50.0,
             smoke: 0.0,
             flame: false,
             timestamp: 0,

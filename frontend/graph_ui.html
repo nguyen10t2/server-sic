@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Tòa Nhà</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style type="text/css">
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #mynetwork {
+            width: 800px;
+            height: 600px;
+            border: 1px solid lightgray;
+            margin: 0 auto;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Sơ đồ cấu trúc tòa nhà (Building Graph)</h2>
+    <p>Các node màu xanh lá là lối thoái hiểm (Exits).</p>
+    <div id="mynetwork"></div>
+
+    <script type="text/javascript">
+        // Lấy dữ liệu từ file building_graph.json 
+        // Do chạy trực tiếp HTML có thể bị lỗi CORS, ta nạp data cứng vào đây, 
+        // hoặc bạn có thể chạy bằng Live Server
+        
+        const graphData = {
+            "nodes": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],
+            "edges": [
+                [1,2,4], [2,3,4], [3,4,4], [4,5,4],
+                [6,7,4], [7,8,4], [8,9,4], [9,10,4],
+                [11,12,4], [12,13,4], [13,14,4], [14,15,4],
+                [16,17,4], [17,18,4], [18,19,4], [19,20,4],
+                [1,6,6], [6,11,6], [11,16,6],
+                [2,7,6], [7,12,6], [12,17,6],
+                [3,8,6], [8,13,6], [13,18,6],
+                [4,9,6], [9,14,6], [14,19,6],
+                [5,10,6], [10,15,6], [15,20,6]
+            ],
+            "exits": [5,10,15,20]
+        };
+
+        const nodes = new vis.DataSet(
+            graphData.nodes.map(id => {
+                // Tính toán tọa độ x, y để vẽ theo dạng Grid 4x5
+                const row = Math.floor((id - 1) / 5);
+                const col = (id - 1) % 5;
+                const isExit = graphData.exits.includes(id);
+
+                return {
+                    id: id,
+                    label: 'Node ' + id + (isExit ? ' (EXIT)' : ''),
+                    x: col * 150, // Cột cách nhau 150px
+                    y: row * 150, // Hàng cách nhau 150px
+                    color: {
+                        background: isExit ? '#4CAF50' : '#2196F3',
+                        border: isExit ? '#388E3C' : '#1976D2'
+                    },
+                    font: { color: 'white' },
+                    shape: 'box',
+                    fixed: true // Cố định vị trí dạng bảng grid
+                };
+            })
+        );
+
+        const edges = new vis.DataSet(
+            graphData.edges.map(e => ({
+                from: e[0],
+                to: e[1],
+                label: e[2].toString(),
+                font: { align: 'top' },
+                color: '#aaaaaa'
+            }))
+        );
+
+        // create a network
+        const container = document.getElementById('mynetwork');
+        const data = {
+            nodes: nodes,
+            edges: edges
+        };
+        const options = {
+            physics: false, // Tắt vật lý để giữ nguyên dạng lưới grid
+            edges: {
+                smooth: false // Đường nối thẳng
+            }
+        };
+
+        new vis.Network(container, data, options);
+    </script>
+</body>
+</html>
