@@ -33,3 +33,25 @@ class BuildingGraph:
                 neighbors.append(edge["from"])
 
         return neighbors
+    
+    def build_adjacency(self):
+
+        graph = {}
+
+        for node in self.nodes:
+
+            graph[
+                node["id"]
+            ] = {}
+
+        for edge in self.edges:
+
+            a = edge["from"]
+            b = edge["to"]
+
+            distance = edge["distance"]
+
+            graph[a][b] = distance
+            graph[b][a] = distance
+
+        return graph
