@@ -265,3 +265,46 @@ pub async fn get_system_summary(
         "has_fire": data.has_fire(),
     }))
 }
+
+#[get("/api/routes/status")]
+pub async fn get_route_status(
+    data: web::Data<AppState>,
+) -> impl Responder {
+
+    let routes: Vec<_> = data
+        .cached_path
+        .iter()
+        .map(|entry| {
+            let node_id = *entry.key();
+            let path = entry.value();
+
+            serde_json::json!({
+                "node_id": node_id,
+                "path": path.path.clone(),
+                "exit_node": path.exit_node,
+                "total_weight": path.total_weight,
+            })
+        })
+        .collect();
+
+    HttpResponse::Ok().json(routes)
+}
+
+#[get("/api/fire/nodes")]
+pub async fn get_fire_nodes(
+    data: web::Data<AppState>,
+) -> impl Responder {
+
+    let fire_nodes = data
+        .fire_status
+        .iter()
+        .filter(|f| f.value().is_fire)
+        .map(|f| *f.key())
+        .collect::<Vec<u16>>();
+
+    HttpResponse::Ok().json(
+        serde_json::json!({
+            "fire_nodes": fire_nodes
+        })
+    )
+}

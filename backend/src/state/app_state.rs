@@ -150,7 +150,7 @@ impl AppState {
 
                         exit_node: path_result.exit_node,
 
-                        version: 1,
+                        pub route_version: AtomicU32,
                     }
                 );
             }

@@ -137,6 +137,7 @@ async fn main() -> std::io::Result<()> {
             .service(esp32::controllers::api::get_all_evacuation_paths)
             .service(esp32::controllers::api::get_evacuation_path)
             .service(esp32::controllers::api::get_building_graph)
+            .service(esp32::controllers::api::get_route_status)
     })
     .bind((ip, port))?
     .run()
