@@ -2,7 +2,11 @@ use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
+use crate::common::fire_detection::{
+    FireDetectionModel,
+    FireDetectionResult,
+    RiskLevel,
+};
 use crate::common::graph::Graph;
 use crate::common::path_finding::{self, PathResult};
 use crate::constants::building::TOTAL_NODES;
@@ -80,10 +84,9 @@ impl AppState {
         let mut current_paths_payload = None;
 
         // 4. Nếu phát hiện có cháy, cập nhật lộ trình sơ tán
-        if fire_result.is_fire {
+        if matches!(fire_result.risk_level, RiskLevel::High | RiskLevel::Critical) {
             self.update_evacuation_paths();
 
-            // Extract the paths here to be broadcasted with WS
             let paths: Vec<_> = self
                 .cached_path
                 .iter()
@@ -95,7 +98,8 @@ impl AppState {
                         "exit_node": entry.value().exit_node,
                     })
                 })
-                .collect();
+            .collect();
+
             current_paths_payload = Some(paths);
         }
 
