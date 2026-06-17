@@ -93,3 +93,13 @@ impl Default for Payload {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutePayload {
+    pub node_id: u16,
+    pub path: Vec<u8>,
+    pub next_node: u8,
+    pub direction: Direction,
+    pub exit_node: u8,
+    pub version: u32,
+}
