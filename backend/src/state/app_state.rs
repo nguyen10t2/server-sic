@@ -24,6 +24,7 @@ pub struct AppState {
 
     /// Lộ trình sơ tán mới nhất (đã được lưu vào bộ nhớ tạm/cache)
     pub cached_path: DashMap<u16, PathResult>,
+    pub fire_status: DashMap<u16, FireDetectionResult>,
 
     /// Kênh broadcast để đẩy dữ liệu tới các kết nối WebSocket realtime
     pub tx: tokio::sync::broadcast::Sender<Arc<WsMessage>>,
@@ -54,6 +55,7 @@ impl AppState {
             graph,
             adjacency_list,
             cached_path: DashMap::new(),
+            fire_status: DashMap::new(),
             tx,
             mqtt_client,
             db_tx,
@@ -70,6 +72,10 @@ impl AppState {
 
         // 3. Phát hiện cháy
         let fire_result = self.fire_model.detect(payload.node_id as u16);
+        self.fire_status.insert(
+            payload.node_id,
+            fire_result.clone(),
+        );
 
         let mut current_paths_payload = None;
 
