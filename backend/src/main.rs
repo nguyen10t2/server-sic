@@ -9,6 +9,8 @@ use esp32::database::pg::PayloadRepository;
 use esp32::database::pool::DB;
 use esp32::state::app_state::AppState;
 
+pub mod mqtt_route;
+
 #[get("/")]
 async fn index() -> HttpResponse {
     HttpResponse::Found().insert_header(("Location", "/api/status")).finish()
