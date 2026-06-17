@@ -122,20 +122,48 @@ impl AppState {
             let fire_status = self.fire_model.detect(node_id);
 
             let mut dir = Direction::OFF;
-            // Lấy bước đi tiếp theo nếu bản thân node không cháy
-            if !fire_status.is_fire {
-                if let Some(path_result) = self.get_evacuation_path(node_id) {
-                    if path_result.path.len() > 1 {
-                        dir = path_finding::get_direction(node_id as u8, path_result.path[1]);
+
+            let mut route_payload = None;
+
+        if !fire_status.is_fire {
+            if let Some(path_result) =
+                self.get_evacuation_path(node_id)
+            {
+                if path_result.path.len() > 1 {
+                    dir = path_finding::get_direction(
+                        node_id as u8,
+                        path_result.path[1],
+                    );
+                }  
+
+                route_payload = Some(
+                    crate::database::schema::RoutePayload {
+                        node_id,
+                        path: path_result.path.clone(),
+                        next_node: if path_result.path.len() > 1 {
+                            path_result.path[1]
+                        } else {
+                            node_id as u8
+                        },
+
+                        direction: dir,
+
+                        exit_node: path_result.exit_node,
+
+                        version: 1,
                     }
-                }
+                );
             }
+        }
 
             let topic = format!("esp32/cmd/{}", node_id);
-            let cmd = crate::database::schema::CommandPayload { dir };
+            let route = match route_payload {
+                Some(r) => r,
+                None => return,
+            };
 
             tokio::spawn(async move {
-                if let Ok(json_str) = serde_json::to_string(&cmd) {
+                if let Ok(json_str) = serde_json::to_string(&route) {
                     let _ = client
                         .publish(&topic, rumqttc::QoS::AtLeastOnce, false, json_str.clone())
                         .await;

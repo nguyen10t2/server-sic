@@ -1,5 +1,6 @@
 use crate::common::fire_detection::FireDetectionResult;
 use crate::state::app_state::AppState;
+use crate::common::fire_detection::RiskLevel;
 use actix_web::{HttpRequest, HttpResponse, Responder, get, web};
 use futures_util::StreamExt as _;
 use log::error;
@@ -177,4 +178,90 @@ pub async fn get_building_graph(data: web::Data<AppState>) -> impl Responder {
         edges,
         exits: data.graph.exits.clone(),
     })
+}
+
+/// Lấy risk status realtime cho tất cả node
+#[get("/api/risk/status")]
+pub async fn get_risk_status(data: web::Data<AppState>) -> impl Responder {
+    let risks: Vec<_> = data
+        .fire_status
+        .iter()
+        .map(|entry| {
+            serde_json::json!({
+                "node_id": *entry.key(),
+                "fire_probability": entry.value().fire_probability,
+                "risk_level": entry.value().risk_level,
+                "is_fire": entry.value().is_fire,
+            })
+        })
+        .collect();
+
+    HttpResponse::Ok().json(risks)
+}
+
+/// Lấy các node đang ở mức nguy hiểm cao
+#[get("/api/risk/high")]
+pub async fn get_high_risk_nodes(data: web::Data<AppState>) -> impl Responder {
+    let nodes: Vec<_> = data
+        .fire_status
+        .iter()
+        .filter(|entry| {
+            matches!(
+                entry.value().risk_level,
+                RiskLevel::High | RiskLevel::Critical
+            )
+        })
+        .map(|entry| {
+            serde_json::json!({
+                "node_id": *entry.key(),
+                "risk_level": entry.value().risk_level,
+                "fire_probability": entry.value().fire_probability,
+            })
+        })
+        .collect();
+
+    HttpResponse::Ok().json(nodes)
+}
+
+/// Tổng quan trạng thái hệ thống
+#[get("/api/system/summary")]
+pub async fn get_system_summary(
+    data: web::Data<AppState>,
+) -> impl Responder {
+
+    let total_nodes = data.graph.nodes.len();
+
+    let alive_nodes = data
+        .latest_data
+        .iter()
+        .filter(|n| n.value().status != 3)
+        .count();
+
+    let dead_nodes = total_nodes.saturating_sub(alive_nodes);
+
+    let fire_nodes = data
+        .fire_status
+        .iter()
+        .filter(|f| f.value().is_fire)
+        .count();
+
+    let high_risk_nodes = data
+        .fire_status
+        .iter()
+        .filter(|f| {
+            matches!(
+                f.value().risk_level,
+                RiskLevel::High | RiskLevel::Critical
+            )
+        })
+        .count();
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "total_nodes": total_nodes,
+        "alive_nodes": alive_nodes,
+        "dead_nodes": dead_nodes,
+        "fire_nodes": fire_nodes,
+        "high_risk_nodes": high_risk_nodes,
+        "has_fire": data.has_fire(),
+    }))
 }
