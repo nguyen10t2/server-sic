@@ -27,10 +27,11 @@ pub async fn run_mqtt_client(
 
             // Fix timestamp logic: thay thế timestamp của payload bằng timestamp hiện tại của server
             // để tránh lỗi watchdog đánh dấu chết node do lệch thời gian
-            // payload.timestamp = std::time::SystemTime::now()
-            //     .duration_since(std::time::UNIX_EPOCH)
-            //     .unwrap_or_default()
-            //     .as_millis() as i64;
+            let mut payload = payload;
+            payload.timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as i64;
 
             info!("Received MQTT payload: {:?}", payload);
 

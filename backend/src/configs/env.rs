@@ -30,11 +30,11 @@ pub fn get_env(key: &str, default: Option<&str>) -> Result<String, env::VarError
 impl Env {
     pub fn new() -> Self {
         Env {
-            ip: get_env("ip", Some("localhost")).unwrap(),
-            port: get_env("port", Some("8080")).unwrap().parse::<u16>().unwrap(),
+            ip: get_env("IP", Some("0.0.0.0")).unwrap(),
+            port: get_env("PORT", Some("8080")).unwrap().parse::<u16>().unwrap(),
 
-            mqtt_broker: get_env("mqtt_broker", Some("localhost")).unwrap(),
-            mqtt_port: get_env("mqtt_port", Some("1883")).unwrap().parse::<u16>().unwrap(),
+            mqtt_broker: get_env("MQTT_BROKER", Some("localhost")).unwrap(),
+            mqtt_port: get_env("MQTT_PORT", Some("1883")).unwrap().parse::<u16>().unwrap(),
         }
     }
 }
