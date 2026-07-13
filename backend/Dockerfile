@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM rust:1.80-slim AS builder
+FROM rust:slim AS builder
 WORKDIR /usr/src/app
 
 # Cài đặt các thư viện phụ thuộc C cần thiết để build (như OpenSSL)
@@ -9,7 +9,7 @@ COPY . .
 RUN cargo build --release
 
 # Stage 2: Run
-FROM debian:bookworm-slim
+FROM ubuntu:24.04
 WORKDIR /app
 
 # Cài đặt OpenSSL runtime
