@@ -112,8 +112,9 @@ impl AppState {
             let fire_status = self.fire_model.detect(node_id);
 
             let mut dir = Direction::OFF;
-            // Lấy bước đi tiếp theo nếu bản thân node không cháy
-            if !fire_status.is_fire {
+            // Chỉ lấy lộ trình sơ tán nếu toà nhà ĐANG CÓ CHÁY và bản thân node này KHÔNG CHÁY
+            let is_building_on_fire = !self.fire_model.get_fire_nodes().is_empty();
+            if is_building_on_fire && !fire_status.is_fire {
                 if let Some(path_result) = self.get_evacuation_path(node_id) {
                     if path_result.path.len() > 1 {
                         dir = path_finding::get_direction(node_id as u8, path_result.path[1]);

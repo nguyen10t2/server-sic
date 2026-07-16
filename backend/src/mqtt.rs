@@ -16,8 +16,9 @@ pub async fn run_mqtt_client(
     client.subscribe(TOPIC_PATTERN, QoS::AtMostOnce).await.unwrap();
 
     loop {
-        if let Ok(Event::Incoming(Packet::Publish(p))) = eventloop.poll().await {
-            let payload: Payload = match serde_json::from_slice::<Payload>(&p.payload) {
+        match eventloop.poll().await {
+            Ok(Event::Incoming(Packet::Publish(p))) => {
+                let payload: Payload = match serde_json::from_slice::<Payload>(&p.payload) {
                 Ok(v) => v,
                 Err(_) => {
                     error!("Failed to parse payload: {:?}", p.payload);
@@ -51,6 +52,12 @@ pub async fn run_mqtt_client(
                     }
                 }
             });
+            }
+            Ok(_) => {}
+            Err(e) => {
+                error!("MQTT Connection error: {:?}", e);
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
         }
     }
 }
