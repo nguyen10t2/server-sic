@@ -2,7 +2,11 @@ use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::common::fire_detection::{FireDetectionModel, FireDetectionResult};
+use crate::common::fire_detection::{
+    FireDetectionModel,
+    FireDetectionResult,
+    RiskLevel,
+};
 use crate::common::graph::Graph;
 use crate::common::path_finding::{self, PathResult};
 use crate::constants::building::TOTAL_NODES;
@@ -24,6 +28,7 @@ pub struct AppState {
 
     /// Lộ trình sơ tán mới nhất (đã được lưu vào bộ nhớ tạm/cache)
     pub cached_path: DashMap<u16, PathResult>,
+    pub fire_status: DashMap<u16, FireDetectionResult>,
 
     /// Kênh broadcast để đẩy dữ liệu tới các kết nối WebSocket realtime
     pub tx: tokio::sync::broadcast::Sender<Arc<WsMessage>>,
@@ -54,6 +59,7 @@ impl AppState {
             graph,
             adjacency_list,
             cached_path: DashMap::new(),
+            fire_status: DashMap::new(),
             tx,
             mqtt_client,
             db_tx,
@@ -70,14 +76,17 @@ impl AppState {
 
         // 3. Phát hiện cháy
         let fire_result = self.fire_model.detect(payload.node_id as u16);
+        self.fire_status.insert(
+            payload.node_id,
+            fire_result.clone(),
+        );
 
         let mut current_paths_payload = None;
 
         // 4. Nếu phát hiện có cháy, cập nhật lộ trình sơ tán
-        if fire_result.is_fire {
+        if matches!(fire_result.risk_level, RiskLevel::High | RiskLevel::Critical) {
             self.update_evacuation_paths();
 
-            // Extract the paths here to be broadcasted with WS
             let paths: Vec<_> = self
                 .cached_path
                 .iter()
@@ -89,7 +98,8 @@ impl AppState {
                         "exit_node": entry.value().exit_node,
                     })
                 })
-                .collect();
+            .collect();
+
             current_paths_payload = Some(paths);
         }
 
